@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>LicitaControl</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
@@ -159,9 +163,17 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
 .dots{display:none}
 .dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);display:block}
 .dots i.entrega{background:var(--warn)}.dots i.vencida{background:var(--crit)}
+button.kpi{width:100%;text-align:left;cursor:pointer;color:var(--fg)}
+button.kpi:hover{border-color:var(--accent)}
+.kpi .d u{color:var(--accent)}
+.ov{position:fixed;inset:0;background:rgba(10,16,34,.55);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:60}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:min(680px,100%);max-height:min(82vh,760px);overflow:auto;padding:18px}
+.dh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}
 @media (prefers-reduced-motion:no-preference){.btn,.chip,.cell{transition:background .12s}}
 </style>
 
+</head>
+<body>
 <div class="app">
   <aside>
     <div class="brand">LICITA<small>CONTROL</small></div>
@@ -186,6 +198,7 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
   </main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div id="modal" hidden></div>
 
 <script>
 (function(){
@@ -230,7 +243,7 @@ function sample(){
 var store={get:function(k,d){try{var v=localStorage.getItem('lc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){try{localStorage.setItem('lc_'+k,JSON.stringify(v))}catch(e){}}};
 var items=store.get('items',null); if(!items)items=sample();
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
-var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
+var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
 function save(){store.set('items',items);store.set('cfg',cfg)}
 
 /* eventos derivados */
@@ -270,15 +283,38 @@ function when(d){return d<0?'Vencida hace '+(-d)+(d===-1?' día':' días'):d===0
 function evLabel(e){return (e.tipo==='entrega'?'Entrega':'Apertura de ofertas')}
 
 /* kpis */
-function kpis(){
-  var act=items.filter(function(i){return i.estado==='Activa'}).length;
-  var aper=items.filter(function(i){var d=diff(i.apertura);return d>=0&&d<=7}).length;
-  var ent=items.filter(function(i){return i.estado==='Entregada'}).length;
-  var venc=items.filter(function(i){var d=diff(i.entrega);return i.estado!=='Entregada'&&d>=0&&d<=3}).length;
-  return {act:act,aper:aper,ent:ent,venc:venc};
+function kpiItems(k){
+  var f={
+    act:function(i){return i.estado==='Activa'},
+    aper:function(i){var d=diff(i.apertura);return d>=0&&d<=7},
+    ent:function(i){return i.estado==='Entregada'},
+    venc:function(i){var d=diff(i.entrega);return i.estado!=='Entregada'&&d>=0&&d<=3}
+  }[k];
+  var key=k==='aper'?'apertura':'entrega';
+  var r=items.filter(f).sort(function(a,b){return a[key]<b[key]?-1:a[key]>b[key]?1:0});
+  if(k==='ent')r.reverse();
+  return r;
 }
-function kpi(label,n,sub,icon,cls){
-  return '<div class="card kpi '+(cls||'')+'"><div><div class="l">'+label+'</div><div class="n">'+n+'</div><div class="d">'+sub+'</div></div><div class="tag">'+ICON[icon]+'</div></div>';
+function kpis(){
+  return {act:kpiItems('act').length,aper:kpiItems('aper').length,ent:kpiItems('ent').length,venc:kpiItems('venc').length};
+}
+function kpi(label,n,sub,icon,cls,key){
+  return '<button type="button" class="card kpi '+(cls||'')+'" data-act="kpi" data-k="'+key+'" aria-label="'+label+': '+n+'. Ver lista"><div><div class="l">'+label+'</div><div class="n">'+n+'</div><div class="d">'+sub+' · <u>ver lista</u></div></div><div class="tag">'+ICON[icon]+'</div></button>';
+}
+var KT={act:['Licitaciones activas','Procesos con estado activo.'],aper:['Apertura de ofertas','Aperturas de hoy y de los próximos 7 días.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por vencer','Entregas de hoy y de los próximos 3 días.']};
+function kpiRow(it){
+  var k=S.kpi,fd=k==='aper'?it.apertura:it.entrega,dd=diff(fd);
+  var pill=k==='ent'?'':' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>';
+  return '<div class="item"><div style="min-width:0;flex:1"><div class="t">'+esc(it.num)+' '+statusPill(it)+'</div><div class="m">'+esc(it.inst)+' — '+esc(it.obj)+'</div><div class="m">Apertura: '+fmt(it.apertura)+' · Entrega: '+fmt(it.entrega)+(it.monto?' · '+money(it.monto):'')+pill+'</div></div>'+
+    '<div class="acts"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div>';
+}
+function renderModal(){
+  var m=document.getElementById('modal');
+  if(!S.kpi){m.hidden=true;m.innerHTML='';return}
+  var list=kpiItems(S.kpi),t=KT[S.kpi];
+  m.hidden=false;
+  m.innerHTML='<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-label="'+t[0]+'"><div class="dh"><div><h2>'+t[0]+' · '+list.length+'</h2><div class="m" style="color:var(--muted);font-size:12px">'+t[1]+'</div></div><button class="btn sm x" data-act="closekpi">Cerrar</button></div><div class="list">'+
+    (list.length?list.map(kpiRow).join(''):'<div class="empty">No hay licitaciones en esta categoría.</div>')+'</div></div></div>';
 }
 
 /* render */
@@ -414,7 +450,7 @@ function vInicio(){
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+
    '<div class="grid"><div class="col"><div class="card"><h2 style="margin-bottom:10px">Calendario de licitaciones semanal</h2>'+weekHtml()+'</div>'+calendarCard()+'</div>'+
-   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'de '+items.length+' registradas','chart')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok')+kpi('Por vencer',k.venc,'entrega en los próximos 3 días','clock',k.venc?'crit':'')+remindersCard()+'</div></div>';
+   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'de '+items.length+' registradas','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'entrega en los próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
   if(it.estado==='Entregada')return '<span class="pill ok">Entregada</span>';
@@ -477,6 +513,7 @@ function render(){
   var p=document.getElementById('page');
   p.innerHTML=({inicio:vInicio,licitaciones:vLic,alertas:vAlertas,sicop:vSicop})[S.view]();
   renderBell();
+  renderModal();
   var f=document.getElementById('addf');
   if(f)f.addEventListener('submit',function(ev){
     ev.preventDefault();
@@ -511,6 +548,7 @@ function sync(){
 }
 
 document.addEventListener('click',function(ev){
+  if(ev.target.classList&&ev.target.classList.contains('ov')){S.kpi=null;renderModal();return}
   var b=ev.target.closest('[data-act]');
   if(!ev.target.closest('#bellPanel')&&!ev.target.closest('#bell')&&S.bell){S.bell=false;renderBell()}
   if(S.pick&&!ev.target.closest('.pickwrap')){S.pick=false;if(!b)render()}
@@ -519,6 +557,9 @@ document.addEventListener('click',function(ev){
   if(a==='pick'){S.pick=!S.pick;S.pyear=S.cur.getFullYear();render();return}
   if(a==='pyear'){S.pyear+=+b.dataset.n;render();return}
   if(a==='pmonth'){S.cur=new Date(S.pyear,+b.dataset.m,1);S.pick=false;render();return}
+  if(a==='kpi'){S.kpi=b.dataset.k;renderModal();var xb=document.querySelector('.dlg .x');if(xb)xb.focus();return}
+  if(a==='closekpi'){S.kpi=null;renderModal();return}
+  if(a==='gocal'){var gd=parse(b.dataset.d);S.kpi=null;S.view='inicio';S.sel=b.dataset.d;S.cur=new Date(gd.getFullYear(),gd.getMonth(),1);render();var mm=document.querySelector('.month');if(mm)mm.scrollIntoView({block:'center'});return}
   if(a==='nav'){S.view=b.dataset.v;S.bell=false;render();window.scrollTo(0,0)}
   else if(a==='day'){S.sel=b.dataset.d;var d=parse(S.sel);S.cur=new Date(d.getFullYear(),d.getMonth(),1);render()}
   else if(a==='prev'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()-1,1);render()}
@@ -538,7 +579,11 @@ document.addEventListener('change',function(ev){
   save();render();
 });
 document.getElementById('q').addEventListener('input',function(e){S.q=e.target.value;if(S.view!=='inicio'&&S.view!=='licitaciones')S.view='inicio';render();var q=document.getElementById('q');q.focus()});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&S.kpi){S.kpi=null;renderModal()}});
 render();
 setInterval(function(){renderBell()},60000);
 })();
 </script>
+
+</body>
+</html>
