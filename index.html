@@ -243,7 +243,7 @@ function sample(){
 var store={get:function(k,d){try{var v=localStorage.getItem('lc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){try{localStorage.setItem('lc_'+k,JSON.stringify(v))}catch(e){}}};
 var items=store.get('items',null); if(!items)items=sample();
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
-var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
+var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todas',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
 function save(){store.set('items',items);store.set('cfg',cfg)}
 
 /* eventos derivados */
@@ -283,15 +283,18 @@ function when(d){return d<0?'Vencida hace '+(-d)+(d===-1?' día':' días'):d===0
 function evLabel(e){return (e.tipo==='entrega'?'Entrega':'Apertura de ofertas')}
 
 /* kpis */
+/* Cada licitación cuenta en una sola tarjeta. Prioridad: entregada, por vencer, apertura próxima, activa. */
+function cat(i){
+  if(i.estado==='Entregada')return 'ent';
+  var de=diff(i.entrega),da=diff(i.apertura);
+  if(de>=0&&de<=3)return 'venc';
+  if(da>=0&&da<=7)return 'aper';
+  if(de>=0)return 'act';
+  return 'vencida';
+}
 function kpiItems(k){
-  var f={
-    act:function(i){return i.estado==='Activa'},
-    aper:function(i){var d=diff(i.apertura);return d>=0&&d<=7},
-    ent:function(i){return i.estado==='Entregada'},
-    venc:function(i){var d=diff(i.entrega);return i.estado!=='Entregada'&&d>=0&&d<=3}
-  }[k];
   var key=k==='aper'?'apertura':'entrega';
-  var r=items.filter(f).sort(function(a,b){return a[key]<b[key]?-1:a[key]>b[key]?1:0});
+  var r=items.filter(function(i){return cat(i)===k}).sort(function(a,b){return a[key]<b[key]?-1:a[key]>b[key]?1:0});
   if(k==='ent')r.reverse();
   return r;
 }
@@ -301,11 +304,12 @@ function kpis(){
 function kpi(label,n,sub,icon,cls,key){
   return '<button type="button" class="card kpi '+(cls||'')+'" data-act="kpi" data-k="'+key+'" aria-label="'+label+': '+n+'. Ver lista"><div><div class="l">'+label+'</div><div class="n">'+n+'</div><div class="d">'+sub+' · <u>ver lista</u></div></div><div class="tag">'+ICON[icon]+'</div></button>';
 }
-var KT={act:['Licitaciones activas','Procesos con estado activo.'],aper:['Apertura de ofertas','Aperturas de hoy y de los próximos 7 días.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por vencer','Entregas de hoy y de los próximos 3 días.']};
+var KT={act:['Licitaciones activas','En curso, sin apertura ni entrega cercanas.'],aper:['Apertura de ofertas','Aperturas de hoy y de los próximos 7 días.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por vencer','Entregas de hoy y de los próximos 3 días.']};
 function kpiRow(it){
   var k=S.kpi,fd=k==='aper'?it.apertura:it.entrega,dd=diff(fd);
-  var pill=k==='ent'?'':' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>';
-  return '<div class="item"><div style="min-width:0;flex:1"><div class="t">'+esc(it.num)+' '+statusPill(it)+'</div><div class="m">'+esc(it.inst)+' — '+esc(it.obj)+'</div><div class="m">Apertura: '+fmt(it.apertura)+' · Entrega: '+fmt(it.entrega)+(it.monto?' · '+money(it.monto):'')+pill+'</div></div>'+
+  var lbl=k==='aper'?'Apertura: ':'Entrega: ';
+  var pill=(k==='aper'||k==='venc')?' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>':'';
+  return '<div class="item"><div style="min-width:0;flex:1"><div class="t">'+esc(it.num)+'</div><div class="m">'+esc(it.inst)+' — '+esc(it.obj)+'</div><div class="m">'+lbl+fmt(fd)+pill+'</div></div>'+
     '<div class="acts"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div>';
 }
 function renderModal(){
@@ -450,7 +454,7 @@ function vInicio(){
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+
    '<div class="grid"><div class="col"><div class="card"><h2 style="margin-bottom:10px">Calendario de licitaciones semanal</h2>'+weekHtml()+'</div>'+calendarCard()+'</div>'+
-   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'de '+items.length+' registradas','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'entrega en los próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
+   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'entrega en los próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
   if(it.estado==='Entregada')return '<span class="pill ok">Entregada</span>';
@@ -486,13 +490,28 @@ function vLic(){
        (it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
    }).join(''):'<tr><td colspan="8" class="empty">No hay licitaciones que coincidan.</td></tr>')+'</tbody></table></div></div>';
 }
+function deliveredRow(it){
+  return '<div class="item"><div class="dot" style="background:var(--ok-soft);color:var(--ok)">'+ICON.doc+'</div><div><div class="t">Entrega · '+esc(it.num)+'</div><div class="m">'+esc(it.inst)+'</div><div class="m"><span class="pill ok">Entregada</span> '+fmt(it.entrega)+'</div></div></div>';
+}
 function vAlertas(){
   var a=alerts();
-  return '<div><h1>Alertas</h1><p class="sub">Elige con cuántos días de anticipación quieres que aparezca el aviso.</p></div>'+
-  '<div class="grid"><div class="card"><h2 style="margin-bottom:6px">Pendientes ahora</h2><div class="list">'+(a.length?a.map(alertItem).join(''):'<div class="empty">No hay alertas con la configuración actual.</div>')+'</div></div>'+
-  '<div class="card"><h2 style="margin-bottom:6px">Anticipación</h2>'+[[7,'7 días antes'],[3,'3 días antes'],[1,'1 día antes'],[0,'El mismo día']].map(function(t){
-    return '<label class="chk"><input type="checkbox" data-th="'+t[0]+'"'+(cfg.th.indexOf(t[0])>-1?' checked':'')+'>'+t[1]+'</label>';
-  }).join('')+'<p class="sub" style="margin-top:10px">Las entregas vencidas siempre se muestran. Los avisos por correo o WhatsApp necesitan un servidor propio, ver la sección Conexión SICOP.</p></div></div>';
+  var ent=items.filter(function(i){return i.estado==='Entregada'}).sort(function(x,y){return x.entrega<y.entrega?1:-1});
+  var sets={
+    todas:a,
+    entrega:a.filter(function(x){return x.e.tipo==='entrega'&&x.d>=0}),
+    apertura:a.filter(function(x){return x.e.tipo==='apertura'}),
+    vencidas:a.filter(function(x){return x.e.tipo==='entrega'&&x.d<0})
+  };
+  var F=[['todas','Todas'],['entrega','Entregas'],['apertura','Aperturas'],['vencidas','Vencidas'],['entregadas','Entregadas']];
+  var n=function(k){return k==='entregadas'?ent.length:sets[k].length};
+  var chips=F.map(function(f){
+    return '<button type="button" class="btn'+(S.af===f[0]?' pri':'')+'" data-act="afilter" data-f="'+f[0]+'" aria-pressed="'+(S.af===f[0])+'">'+f[1]+' · '+n(f[0])+'</button>';
+  }).join('');
+  var rows=S.af==='entregadas'?ent.map(deliveredRow):sets[S.af].map(alertItem);
+  var vacio={todas:'No hay alertas pendientes.',entrega:'No hay entregas con alerta.',apertura:'No hay aperturas con alerta.',vencidas:'No hay entregas vencidas.',entregadas:'Todavía no hay entregas realizadas.'}[S.af];
+  return '<div><h1>Alertas</h1><p class="sub">Avisos separados por tipo. La anticipación y la hora se eligen al agregar cada licitación.</p></div>'+
+  '<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+chips+'</div><div class="list">'+(rows.length?rows.join(''):'<div class="empty">'+vacio+'</div>')+'</div>'+
+  '<p class="sub" style="margin-top:12px">Los avisos por correo o WhatsApp necesitan un servidor propio, ver la sección Conexión SICOP.</p></div>';
 }
 function vSicop(){
   return '<div><h1>Conexión SICOP</h1><p class="sub">Cómo traer los carteles reales a esta página.</p></div>'+
@@ -559,6 +578,7 @@ document.addEventListener('click',function(ev){
   if(a==='pmonth'){S.cur=new Date(S.pyear,+b.dataset.m,1);S.pick=false;render();return}
   if(a==='kpi'){S.kpi=b.dataset.k;renderModal();var xb=document.querySelector('.dlg .x');if(xb)xb.focus();return}
   if(a==='closekpi'){S.kpi=null;renderModal();return}
+  if(a==='afilter'){S.af=b.dataset.f;render();return}
   if(a==='gocal'){var gd=parse(b.dataset.d);S.kpi=null;S.view='inicio';S.sel=b.dataset.d;S.cur=new Date(gd.getFullYear(),gd.getMonth(),1);render();var mm=document.querySelector('.month');if(mm)mm.scrollIntoView({block:'center'});return}
   if(a==='nav'){S.view=b.dataset.v;S.bell=false;render();window.scrollTo(0,0)}
   else if(a==='day'){S.sel=b.dataset.d;var d=parse(S.sel);S.cur=new Date(d.getFullYear(),d.getMonth(),1);render()}
