@@ -454,7 +454,7 @@ function vInicio(){
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+
    '<div class="grid"><div class="col"><div class="card"><h2 style="margin-bottom:10px">Calendario de licitaciones semanal</h2>'+weekHtml()+'</div>'+calendarCard()+'</div>'+
-   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'entrega en los próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
+   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
   if(it.estado==='Entregada')return '<span class="pill ok">Entregada</span>';
