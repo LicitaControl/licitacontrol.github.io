@@ -163,6 +163,45 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
 .dots{display:none}
 .dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);display:block}
 .dots i.entrega{background:var(--warn)}.dots i.vencida{background:var(--crit)}
+.lgn{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-left,0px))}
+.lgc{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
+.lgb{background:var(--navy);padding:12px 16px;border-radius:12px;align-self:flex-start}
+.lgbtn{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;font-size:15px}
+.lgbtn svg{width:20px;height:20px}
+.lgerr{color:var(--crit);margin:0}
+.ubox{display:flex;align-items:center;gap:8px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.uemail{font-size:12px;color:var(--muted);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:820px){.uemail{display:none}}
+.dpw{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0;position:relative}
+.dpb{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--muted);text-align:left;font-size:14px}
+.dpb:hover{border-color:var(--accent)}
+.dpb.has{color:var(--fg)}
+.dpb svg{color:var(--accent);flex:none}
+.dpop{position:absolute;top:100%;left:0;z-index:45;margin-top:4px;width:280px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.2);padding:12px;color:var(--fg);font-size:14px}
+.dph{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-family:var(--display);text-transform:capitalize}
+.dpg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dpw7{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:3px 0}
+.dpd{height:34px;border:0;border-radius:8px;background:none;color:var(--fg);font-weight:500}
+.dpd:hover{background:var(--accent-soft)}
+.dpd.out{opacity:.4}
+.dpd.dom{background:var(--weekend)}
+.dpd.feri{background:var(--hol-soft);color:var(--hol);font-weight:700}
+.dpd.hoy{outline:2px solid var(--accent);outline-offset:-2px}
+.dpd.sel{background:var(--accent);color:#fff}
+.dpop.rt{left:auto;right:0}
+.tinp{display:flex;align-items:center;gap:8px}
+.tinp input{width:64px;text-align:center;font-family:var(--display);font-size:22px;font-weight:600;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 4px;color:var(--fg)}
+.tinp b{font-size:22px}
+.tap{margin-left:auto;display:flex;flex-direction:column;gap:4px}
+.tap .dpd{width:52px;height:30px}
+.dpl2{font-size:11px;font-weight:600;color:var(--muted);margin:8px 0 4px}
+.dpl2:first-child{margin-top:0}
+.dpo{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:10px 12px;color:var(--fg)}
+.dpo:hover{background:var(--accent-soft)}
+.dpo.sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.dpf{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.dpl{font-size:11px;color:var(--hol);display:inline-flex;gap:4px;align-items:center}
 button.remb{width:100%;background:none;border:0;border-top:1px solid var(--line);text-align:left;color:var(--fg);border-radius:0}
 .list>button.remb:first-child{border-top:0}
 button.remb:hover{background:var(--surface2)}
@@ -182,7 +221,7 @@ button.kpi:hover{border-color:var(--accent)}
     <div class="brand">LICITA<small>CONTROL</small></div>
     <nav class="nav" id="nav"></nav>
     <div class="spacer"></div>
-    <div class="side-note">Prototipo con datos de ejemplo. Los cambios se guardan solo en este navegador.</div>
+    <div class="side-note" id="sideNote">Prototipo con datos de ejemplo. Los cambios se guardan solo en este navegador.</div>
   </aside>
   <main>
     <header class="top">
@@ -196,13 +235,16 @@ button.kpi:hover{border-color:var(--accent)}
         <div class="panel" id="bellPanel" hidden></div>
       </div>
       <div class="ibtn" style="cursor:default"><div class="today-lbl">Fecha<b id="todayLbl"></b></div></div>
+      <div class="ubox" id="userBox" hidden></div>
     </header>
     <div class="page" id="page"></div>
   </main>
 </div>
+<div id="login" hidden></div>
 <div class="toast" id="toast" hidden></div>
 <div id="modal" hidden></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
 <script>
 (function(){
 var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
@@ -245,10 +287,46 @@ function sample(){
   ];
 }
 var store={get:function(k,d){try{var v=localStorage.getItem('lc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){try{localStorage.setItem('lc_'+k,JSON.stringify(v))}catch(e){}}};
-var items=store.get('items',null); if(!items)items=sample();
+/* Nube: pega aquí la dirección y la clave pública (anon) de tu proyecto de Supabase.
+   Con los dos vacíos la página funciona sin inicio de sesión y guarda en este navegador. */
+var SB_URL='', SB_KEY='';
+var CLOUD=!!(SB_URL&&SB_KEY);
+var sb=null, USER=null;
+if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
+var items=CLOUD?[]:(store.get('items',null)||sample());
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
-var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todas',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
-function save(){store.set('items',items);store.set('cfg',cfg)}
+var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
+function save(){if(!CLOUD)store.set('items',items);store.set('cfg',cfg)}
+function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,al:(r.al&&r.al.length)?r.al:[3],hora:(r.hora||'08:00').slice(0,5)}}
+function dbLoad(){
+  return sb.from('licitaciones').select('*').order('entrega',{ascending:true}).then(function(r){
+    if(r.error)throw r.error;
+    items=r.data.map(fromRow);
+  });
+}
+function showLogin(msg){
+  document.querySelector('.app').hidden=true;
+  var l=document.getElementById('login');l.hidden=false;
+  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>Inicia sesión</h1><p class="sub">Entra con tu cuenta de Outlook para ver tus licitaciones y recibir los avisos en tu correo.</p>'+
+    (sb?'<button type="button" class="btn pri lgbtn" data-act="login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Iniciar sesión con Outlook</button>':'')+
+    '<p class="lgerr">'+esc(msg||'')+'</p></div></div>';
+}
+function enterApp(session){
+  if(!session){USER=null;items=[];showLogin();return}
+  USER=session.user;
+  document.getElementById('login').hidden=true;
+  document.querySelector('.app').hidden=false;
+  dbLoad().then(function(){render()}).catch(function(e){console.error(e);render();toast('No se pudieron cargar tus licitaciones. Recarga la página.')});
+}
+function renderUser(){
+  var u=document.getElementById('userBox'),n=document.getElementById('sideNote');
+  if(!CLOUD){u.hidden=true;return}
+  n.hidden=true;
+  if(!USER){u.hidden=true;return}
+  var em=USER.email||'';
+  u.hidden=false;
+  u.innerHTML='<div class="av" aria-hidden="true">'+esc((em[0]||'?').toUpperCase())+'</div><span class="uemail">'+esc(em)+'</span><button type="button" class="btn sm" data-act="logout">Cerrar sesión</button>';
+}
 
 /* eventos derivados */
 function events(){
@@ -342,7 +420,7 @@ function renderModal(){
 }
 
 /* render */
-var NAV=[['inicio','Inicio','home'],['licitaciones','Licitaciones','list'],['alertas','Alertas','bell'],['sicop','Conexión SICOP','plug']];
+var NAV=[['inicio','Inicio','home'],['licitaciones','Licitaciones','list'],['historial','Historial','clock'],['sicop','Conexión SICOP','plug']];
 function renderNav(){
   document.getElementById('nav').innerHTML=NAV.map(function(n){
     return '<button data-act="nav" data-v="'+n[0]+'"'+(S.view===n[0]?' aria-current="page"':'')+'>'+ICON[n[2]]+n[1]+'</button>';
@@ -354,7 +432,7 @@ function renderBell(){
   var p=document.getElementById('bellPanel');p.hidden=!S.bell;
   if(S.bell){
     p.innerHTML='<h2 style="margin-bottom:6px">Alertas activas</h2>'+(a.length?'<div class="list">'+a.slice(0,6).map(alertItem).join('')+'</div>':'<div class="empty">Sin alertas por ahora.</div>')+
-      '<div style="margin-top:8px"><button class="btn sm" data-act="nav" data-v="alertas">Ver todas y configurar</button></div>';
+      '<div style="margin-top:8px"><button class="btn sm" data-act="nav" data-v="historial">Ver historial</button></div>';
   }
 }
 function alertItem(x){
@@ -466,7 +544,7 @@ function bannerHtml(){
   if(!a.length)return '';
   var venc=a.filter(function(x){return x.d<0}).length,hoy=a.filter(function(x){return x.d>=0&&x.d<=1}).length;
   var parts=[];if(venc)parts.push(venc+(venc===1?' entrega vencida':' entregas vencidas'));if(hoy)parts.push(hoy+(hoy===1?' evento hoy o mañana':' eventos hoy o mañana'));
-  return '<div class="banner" role="alert"><div><b>Requiere atención</b>'+parts.join(' · ')+'</div><button data-act="nav" data-v="alertas">Ver alertas</button><button data-act="dismiss" aria-label="Cerrar aviso">Cerrar</button></div>';
+  return '<div class="banner" role="alert"><div><b>Requiere atención</b>'+parts.join(' · ')+'</div><button data-act="bellopen">Ver alertas</button><button data-act="dismiss" aria-label="Cerrar aviso">Cerrar</button></div>';
 }
 
 function vInicio(){
@@ -490,51 +568,55 @@ function alertTxt(it){
 }
 function vLic(){
   var rows=items.filter(matches).sort(function(a,b){return a.entrega<b.entrega?-1:1});
-  return '<div><h1>Licitaciones</h1><p class="sub">Registra procesos a mano o tráelos desde SICOP. Los de ejemplo se pueden borrar.</p></div>'+
+  return '<div><h1>Licitaciones</h1><p class="sub">'+(CLOUD?'Registra tus procesos a mano o tráelos desde SICOP.':'Registra procesos a mano o tráelos desde SICOP. Los de ejemplo se pueden borrar.')+'</p></div>'+
   '<div class="card"><h2 style="margin-bottom:10px">Agregar licitación</h2><form class="f" id="addf" style="align-items:start">'+
    '<div style="grid-column:1/-1;display:grid;gap:10px">'+
      '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001"></label>'+
      '<label class="fl">Institución<input id="f_inst" required placeholder="Municipalidad de…"></label>'+
      '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata"></label></div>'+
-   '<label class="fl">Apertura de ofertas<input id="f_ap" type="date" required></label>'+
-   '<label class="fl">Fecha de entrega<input id="f_en" type="date" required></label>'+
-   '<label class="fl">Tipo<select id="f_tipo" required><option value="">Elige el tipo</option><option value="reducida">Licitación reducida</option><option value="menor">Licitación menor</option><option value="mayor">Licitación mayor</option></select></label>'+
+   '<div class="dpw" data-for="f_ap"><span>Apertura de ofertas</span><input type="hidden" id="f_ap"><button type="button" class="dpb" data-act="dp" data-for="f_ap"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="dpt">Elegir fecha</span></button></div>'+
+   '<div class="dpw" data-for="f_en"><span>Fecha de entrega</span><input type="hidden" id="f_en"><button type="button" class="dpb" data-act="dp" data-for="f_en"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="dpt">Elegir fecha</span></button></div>'+
+   '<div class="dpw" data-for="f_tipo"><span>Tipo</span><input type="hidden" id="f_tipo"><button type="button" class="dpb" data-act="dp" data-kind="tipo" data-for="f_tipo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1"/></svg><span class="dpt">Elige el tipo</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg></button></div>'+
    '<fieldset style="border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend>'+
      '<label class="chk"><input type="checkbox" name="f_al" value="7">7 días antes</label>'+
      '<label class="chk"><input type="checkbox" name="f_al" value="3" checked>3 días antes</label>'+
      '<label class="chk"><input type="checkbox" name="f_al" value="0">El mismo día</label>'+
      '<label class="chk"><input type="checkbox" id="f_cuson">Personalizado</label>'+
      '<div style="display:flex;align-items:center;gap:6px;padding-bottom:6px"><input id="f_cus" type="number" min="1" max="90" step="1" placeholder="Ej. 10" disabled aria-label="Días de anticipación personalizados" style="width:90px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg)"><span style="color:var(--muted);font-size:12px">días antes</span></div></fieldset>'+
-   '<label class="fl">Hora de la alerta<input id="f_hora" type="time" value="08:00" required></label>'+
-   '<button class="btn pri" type="submit">Agregar</button></form></div>'+
+   '<div class="dpw" data-for="f_hora"><span>Hora de la alerta</span><input type="hidden" id="f_hora" value="08:00"><button type="button" class="dpb has" data-act="dp" data-kind="time" data-for="f_hora"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="dpt">8:00 AM</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg></button></div>'+
+   '<button class="btn pri" type="submit">Agregar</button>'+
+   '<p class="sub" style="grid-column:1/-1;margin:0">'+(CLOUD&&USER?'Los avisos llegarán a <b>'+esc(USER.email)+'</b>. <button type="button" class="btn sm" data-act="testmail">Enviarme un correo de prueba</button>':'Sin iniciar sesión, los avisos solo se ven dentro de la página.')+'</p></form></div>'+
   '<div class="card"><div class="tablewrap"><table><thead><tr><th>Procedimiento</th><th>Institución y objeto</th><th>Apertura</th><th>Entrega</th><th>Tipo</th><th>Alerta</th><th>Estado</th><th></th></tr></thead><tbody>'+
    (rows.length?rows.map(function(it){
      return '<tr><td><b>'+esc(it.num)+'</b>'+(it.ej?'<div class="m" style="color:var(--muted);font-size:11px">ejemplo</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td>'+tipoTxt(it.tipo)+'</td><td class="num2">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap">'+
        (it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
    }).join(''):'<tr><td colspan="8" class="empty">No hay licitaciones que coincidan.</td></tr>')+'</tbody></table></div></div>';
 }
-function deliveredRow(it){
-  return '<div class="item"><div class="dot" style="background:var(--ok-soft);color:var(--ok)">'+ICON.doc+'</div><div><div class="t">Entrega · '+esc(it.num)+'</div><div class="m">'+esc(it.inst)+'</div><div class="m"><span class="pill ok">Entregada</span> '+fmt(it.entrega)+'</div></div></div>';
+function histEvents(){
+  var out=[];
+  items.filter(matches).forEach(function(it){
+    if(diff(it.apertura)<0)out.push({it:it,k:'apertura',fecha:it.apertura,t:'apertura',lbl:'Apertura de ofertas realizada',pill:['','Realizada']});
+    if(it.estado==='Entregada')out.push({it:it,k:'entrega',fecha:it.entrega,t:'entrega',lbl:'Entrega realizada',pill:['ok','Entregada']});
+    else if(diff(it.entrega)<0)out.push({it:it,k:'vencida',fecha:it.entrega,t:'entrega',lbl:'Entrega vencida',pill:['crit',when(diff(it.entrega))]});
+  });
+  out.sort(function(a,b){return a.fecha<b.fecha?1:a.fecha>b.fecha?-1:0});
+  return out;
 }
-function vAlertas(){
-  var a=alerts();
-  var ent=items.filter(function(i){return i.estado==='Entregada'}).sort(function(x,y){return x.entrega<y.entrega?1:-1});
-  var sets={
-    todas:a,
-    entrega:a.filter(function(x){return x.e.tipo==='entrega'&&x.d>=0}),
-    apertura:a.filter(function(x){return x.e.tipo==='apertura'}),
-    vencidas:a.filter(function(x){return x.e.tipo==='entrega'&&x.d<0})
-  };
-  var F=[['todas','Todas'],['entrega','Entregas'],['apertura','Aperturas'],['vencidas','Vencidas'],['entregadas','Entregadas']];
-  var n=function(k){return k==='entregadas'?ent.length:sets[k].length};
+function vHistorial(){
+  var all=histEvents();
+  var F=[['todo','Todo'],['entrega','Entregas'],['apertura','Aperturas'],['vencida','Vencidas']];
+  var n=function(k){return k==='todo'?all.length:all.filter(function(e){return e.k===k}).length};
   var chips=F.map(function(f){
     return '<button type="button" class="btn'+(S.af===f[0]?' pri':'')+'" data-act="afilter" data-f="'+f[0]+'" aria-pressed="'+(S.af===f[0])+'">'+f[1]+' · '+n(f[0])+'</button>';
   }).join('');
-  var rows=S.af==='entregadas'?ent.map(deliveredRow):sets[S.af].map(alertItem);
-  var vacio={todas:'No hay alertas pendientes.',entrega:'No hay entregas con alerta.',apertura:'No hay aperturas con alerta.',vencidas:'No hay entregas vencidas.',entregadas:'Todavía no hay entregas realizadas.'}[S.af];
-  return '<div><h1>Alertas</h1><p class="sub">Avisos separados por tipo. La anticipación y la hora se eligen al agregar cada licitación.</p></div>'+
-  '<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+chips+'</div><div class="list">'+(rows.length?rows.join(''):'<div class="empty">'+vacio+'</div>')+'</div>'+
-  '<p class="sub" style="margin-top:12px">Los avisos por correo o WhatsApp necesitan un servidor propio, ver la sección Conexión SICOP.</p></div>';
+  var rows=all.filter(function(e){return S.af==='todo'||e.k===S.af});
+  var vacio={todo:'Todavía no hay movimientos.',entrega:'Todavía no hay entregas realizadas.',apertura:'Todavía no hay aperturas realizadas.',vencida:'No hay entregas vencidas.'}[S.af];
+  return '<div><h1>Historial</h1><p class="sub">Lo que ya pasó con tus licitaciones, de lo más reciente a lo más antiguo. Toca una fila para ver el detalle.</p></div>'+
+  '<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+chips+'</div><div class="list">'+(rows.length?rows.map(function(e){
+    var c=e.k==='vencida'?'vencida':e.k==='entrega'?'':'';
+    return '<button type="button" class="item remb" data-act="rem" data-id="'+e.it.id+'" data-t="'+e.t+'"><div class="dot '+(e.k==='vencida'?'vencida':'')+'" style="'+(e.k==='entrega'?'background:var(--ok-soft);color:var(--ok)':'')+'">'+ICON[e.t==='entrega'?'doc':'gavel']+'</div><div style="min-width:0"><div class="t">'+e.lbl+' · '+esc(e.it.num)+'</div><div class="m">'+esc(e.it.inst)+' — '+esc(e.it.obj)+'</div><div class="m">'+fmt(e.fecha)+' <span class="pill '+e.pill[0]+'">'+e.pill[1]+'</span></div></div></button>';
+  }).join(''):'<div class="empty">'+vacio+'</div>')+'</div>'+
+  '<p class="sub" style="margin-top:12px">Los avisos pendientes están en la campana de arriba. Los avisos por correo o WhatsApp necesitan un servidor propio, ver la sección Conexión SICOP.</p></div>';
 }
 function vSicop(){
   return '<div><h1>Conexión SICOP</h1><p class="sub">Cómo traer los carteles reales a esta página.</p></div>'+
@@ -545,15 +627,49 @@ function vSicop(){
    '<li>Esta página ya espera un servicio con la forma de abajo. Cuando lo tengas, pega su dirección y pulsa Sincronizar.</li></ol></div>'+
    '<div class="card"><h2 style="margin-bottom:8px">Formato esperado</h2><pre>GET {tu-servidor}/licitaciones\n[\n  {\n    "num": "2026LN-000014-0001100001",\n    "inst": "Municipalidad de Escazú",\n    "obj": "Suministro de mobiliario",\n    "estado": "Activa",\n    "apertura": "2026-11-16",\n    "entrega": "2026-11-23",\n    "tipo": "menor"\n  }\n]</pre></div></div>'+
   '<div class="card"><h2 style="margin-bottom:8px">Sincronizar</h2><label class="fl">Dirección de tu servidor<input id="backend" type="url" placeholder="https://mi-servidor.cr/api" value="'+esc(cfg.backend)+'"></label>'+
-   '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn pri" data-act="sync">Sincronizar ahora</button><button class="btn" data-act="reset">Restaurar ejemplos</button></div>'+
+   '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn pri" data-act="sync">Sincronizar ahora</button>'+(CLOUD?'':'<button class="btn" data-act="reset">Restaurar ejemplos</button>')+'</div>'+
    '<p class="sub" id="syncMsg" style="margin-top:10px">Esta vista previa bloquea conexiones externas. La sincronización funciona cuando publiques la página en tu propio sitio.</p></div></div>';
 }
 
+var DP=null;
+function dpClose(){var o=document.querySelector('.dpop');if(o)o.remove();DP=null}
+function t12(v){var p=v.split(':'),h=+p[0],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+p[1]+' '+ap}
+function tpad(n){return n<10?'0'+n:''+n}
+function tapply(){
+  var hh=(DP.h%12)+(DP.ap==='PM'?12:0),v=tpad(hh)+':'+tpad(DP.mi);
+  document.getElementById(DP.id).value=v;
+  document.querySelector('.dpw[data-for="'+DP.id+'"] .dpt').textContent=t12(v);
+  var pv=document.getElementById('t_prev');if(pv)pv.textContent=t12(v);
+}
+function dpDrawTime(o){
+  var aps=['AM','PM'].map(function(a){return '<button type="button" class="dpd'+(a===DP.ap?' sel':'')+'" data-act="tset" data-k="ap" data-v="'+a+'">'+a+'</button>'}).join('');
+  o.innerHTML='<div class="dpl2">Escribe la hora y los minutos</div><div class="tinp"><input id="t_h" type="number" inputmode="numeric" min="1" max="12" value="'+DP.h+'" aria-label="Hora"><b>:</b><input id="t_m" type="number" inputmode="numeric" min="0" max="59" value="'+tpad(DP.mi)+'" aria-label="Minutos"><div class="tap">'+aps+'</div></div><div class="dpf"><b id="t_prev" style="font-family:var(--display);font-size:18px">'+t12(document.getElementById(DP.id).value||'08:00')+'</b><button type="button" class="btn sm pri" data-act="tdone">Listo</button></div>';
+}
+function dpDrawTipo(o){
+  var cur=document.getElementById(DP.id).value;
+  o.innerHTML=Object.keys(TIPOS).map(function(k){return '<button type="button" class="dpo'+(k===cur?' sel':'')+'" data-act="tipick" data-v="'+k+'">'+TIPOS[k]+'</button>'}).join('');
+}
+function dpDraw(){
+  var w=document.querySelector('.dpw[data-for="'+DP.id+'"]');if(!w)return;
+  var o=w.querySelector('.dpop');if(!o){o=document.createElement('div');o.className='dpop'+(DP.kind==='time'?' rt':'');w.appendChild(o)}
+  if(DP.kind==='time'){dpDrawTime(o);return}
+  if(DP.kind==='tipo'){dpDrawTipo(o);return}
+  var val=document.getElementById(DP.id).value,first=new Date(DP.y,DP.m,1),start=weekStart(first),g='';
+  ['L','M','M','J','V','S','D'].forEach(function(c){g+='<span class="dpw7">'+c+'</span>'});
+  for(var i=0;i<42;i++){
+    var d=addDays(start,i),s=iso(d);if(i>=35&&d.getMonth()!==DP.m)break;
+    var hh=hol(s);
+    g+='<button type="button" class="dpd'+(d.getMonth()!==DP.m?' out':'')+(d.getDay()===0?' dom':'')+(hh?' feri':'')+(s===iso(TODAY)?' hoy':'')+(s===val?' sel':'')+'" data-act="dppick" data-d="'+s+'"'+(hh?' title="'+esc(hh.n)+'"':'')+'>'+d.getDate()+'</button>';
+  }
+  o.innerHTML='<div class="dph"><button type="button" class="btn sm" data-act="dpnav" data-n="-1" aria-label="Mes anterior">‹</button><b>'+MES[DP.m]+' '+DP.y+'</b><button type="button" class="btn sm" data-act="dpnav" data-n="1" aria-label="Mes siguiente">›</button></div><div class="dpg">'+g+'</div><div class="dpf"><button type="button" class="btn sm" data-act="dppick" data-d="'+iso(TODAY)+'">Hoy</button><span class="dpl"><span class="hf" style="display:inline-grid;vertical-align:-2px">'+FLAG+'</span> feriado</span></div>';
+}
 function render(){
+  DP=null;
   document.getElementById('todayLbl').textContent=TODAY.getDate()+'/'+String(TODAY.getMonth()+1).padStart(2,'0')+'/'+TODAY.getFullYear();
   renderNav();
+  renderUser();
   var p=document.getElementById('page');
-  p.innerHTML=({inicio:vInicio,licitaciones:vLic,alertas:vAlertas,sicop:vSicop})[S.view]();
+  p.innerHTML=({inicio:vInicio,licitaciones:vLic,historial:vHistorial,sicop:vSicop})[S.view]();
   renderBell();
   renderModal();
   var f=document.getElementById('addf');
@@ -562,6 +678,8 @@ function render(){
   if(f)f.addEventListener('submit',function(ev){
     ev.preventDefault();
     var g=function(i){return document.getElementById(i).value.trim()};
+    if(!g('f_ap')||!g('f_en')){toast('Elige la fecha de apertura y la de entrega');return}
+    if(!g('f_tipo')){toast('Elige el tipo de licitación');return}
     var al=Array.prototype.slice.call(f.querySelectorAll('input[name="f_al"]:checked')).map(function(c){return +c.value});
     if(document.getElementById('f_cuson').checked){
       var cv=parseInt(document.getElementById('f_cus').value,10);
@@ -569,7 +687,16 @@ function render(){
       if(al.indexOf(cv)<0)al.push(cv);
     }
     if(!al.length){toast('Elige cuándo quieres la alerta');return}
-    items.push({id:'u'+Date.now(),num:g('f_num'),inst:g('f_inst'),obj:g('f_obj'),estado:'Activa',apertura:g('f_ap'),entrega:g('f_en'),tipo:g('f_tipo'),al:al,hora:g('f_hora')||'08:00'});
+    var nueva={num:g('f_num'),inst:g('f_inst'),obj:g('f_obj'),tipo:g('f_tipo'),apertura:g('f_ap'),entrega:g('f_en'),al:al,hora:g('f_hora')||'08:00'};
+    if(CLOUD){
+      sb.from('licitaciones').insert(nueva).select().single().then(function(r){
+        if(r.error){toast(r.error.code==='23505'?'Ya tienes una licitación con ese número':'No se pudo guardar. Intenta de nuevo.');return}
+        items.push(fromRow(r.data));render();toast('Licitación agregada');
+      });
+      return;
+    }
+    nueva.id='u'+Date.now();nueva.estado='Activa';
+    items.push(nueva);
     save();render();toast('Licitación agregada');
   });
 }
@@ -582,13 +709,17 @@ function sync(){
   if(!url){msg.textContent='Escribe primero la dirección de tu servidor.';return}
   msg.textContent='Consultando…';
   fetch(url+'/licitaciones').then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(arr){
-    var n=0;arr.forEach(function(x){
+    var n=0,rows=[];arr.forEach(function(x){
       if(!x.num||!x.apertura||!x.entrega)return;
+      if(CLOUD){rows.push({user_id:USER.id,num:x.num,inst:x.inst||'',obj:x.obj||'',tipo:x.tipo||'menor',estado:x.estado||'Activa',apertura:x.apertura,entrega:x.entrega});n++;return}
       var ex=items.filter(function(i){return i.num===x.num})[0];
       if(ex){ex.estado=x.estado||ex.estado;ex.apertura=x.apertura;ex.entrega=x.entrega;ex.tipo=x.tipo||ex.tipo}
       else items.push({id:'x'+x.num,num:x.num,inst:x.inst||'',obj:x.obj||'',estado:x.estado||'Activa',apertura:x.apertura,entrega:x.entrega,tipo:x.tipo||''});
       n++;
     });
+    if(CLOUD){
+      return sb.from('licitaciones').upsert(rows,{onConflict:'user_id,num'}).then(function(r){if(r.error)throw r.error;return dbLoad()}).then(function(){render();toast(n+' licitaciones sincronizadas')});
+    }
     items=items.filter(function(i){return !i.ej||!n});
     save();render();toast(n+' licitaciones sincronizadas');
   }).catch(function(){
@@ -600,15 +731,27 @@ document.addEventListener('click',function(ev){
   if(ev.target.classList&&ev.target.classList.contains('ov')){S.kpi=null;renderModal();return}
   var b=ev.target.closest('[data-act]');
   if(!ev.target.closest('#bellPanel')&&!ev.target.closest('#bell')&&S.bell){S.bell=false;renderBell()}
+  if(DP&&!ev.target.closest('.dpw'))dpClose();
   if(S.pick&&!ev.target.closest('.pickwrap')){S.pick=false;if(!b)render()}
   if(!b)return;
   var a=b.dataset.act;
+  if(a==='dp'){var did=b.dataset.for,kd=b.dataset.kind||'date';if(DP&&DP.id===did){dpClose();return}dpClose();var cv0=document.getElementById(did).value;
+    if(kd==='date'){var bd=cv0?parse(cv0):TODAY;DP={id:did,kind:'date',y:bd.getFullYear(),m:bd.getMonth()}}
+    else if(kd==='time'){var tp=(cv0||'08:00').split(':'),h24=+tp[0];DP={id:did,kind:'time',h:h24%12||12,mi:+tp[1],ap:h24>=12?'PM':'AM'}}
+    else DP={id:did,kind:'tipo'};
+    dpDraw();return}
+  if(a==='tset'){DP.ap=b.dataset.v;tapply();dpDraw();return}
+  if(a==='tdone'){dpClose();return}
+  if(a==='tipick'){var tw=document.querySelector('.dpw[data-for="f_tipo"]');document.getElementById('f_tipo').value=b.dataset.v;tw.querySelector('.dpt').textContent=TIPOS[b.dataset.v];tw.querySelector('.dpb').classList.add('has');dpClose();return}
+  if(a==='dpnav'){var nd=new Date(DP.y,DP.m+(+b.dataset.n),1);DP.y=nd.getFullYear();DP.m=nd.getMonth();dpDraw();return}
+  if(a==='dppick'){var pid=DP.id,w2=document.querySelector('.dpw[data-for="'+pid+'"]');document.getElementById(pid).value=b.dataset.d;w2.querySelector('.dpt').textContent=fmt(b.dataset.d);w2.querySelector('.dpb').classList.add('has');dpClose();return}
   if(a==='pick'){S.pick=!S.pick;S.pyear=S.cur.getFullYear();render();return}
   if(a==='pyear'){S.pyear+=+b.dataset.n;render();return}
   if(a==='pmonth'){S.cur=new Date(S.pyear,+b.dataset.m,1);S.pick=false;render();return}
   if(a==='kpi'){S.kpi=b.dataset.k;renderModal();var xb=document.querySelector('.dlg .x');if(xb)xb.focus();return}
   if(a==='rem'){S.kpi='rem';S.remId=b.dataset.id;S.remT=b.dataset.t;renderModal();var xr=document.querySelector('.dlg .x');if(xr)xr.focus();return}
   if(a==='closekpi'){S.kpi=null;renderModal();return}
+  if(a==='bellopen'){S.bell=true;render();window.scrollTo(0,0);return}
   if(a==='afilter'){S.af=b.dataset.f;render();return}
   if(a==='gocal'){var gd=parse(b.dataset.d);S.kpi=null;S.view='inicio';S.sel=b.dataset.d;S.cur=new Date(gd.getFullYear(),gd.getMonth(),1);render();var mm=document.querySelector('.month');if(mm)mm.scrollIntoView({block:'center'});return}
   if(a==='nav'){S.view=b.dataset.v;S.bell=false;render();window.scrollTo(0,0)}
@@ -616,8 +759,19 @@ document.addEventListener('click',function(ev){
   else if(a==='prev'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()-1,1);render()}
   else if(a==='next'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()+1,1);render()}
   else if(a==='today'){S.cur=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);S.sel=iso(TODAY);render()}
-  else if(a==='done'){items.forEach(function(i){if(i.id===b.dataset.id)i.estado='Entregada'});save();render();toast('Marcada como entregada')}
-  else if(a==='del'){items=items.filter(function(i){return i.id!==b.dataset.id});save();render()}
+  else if(a==='done'){
+    var idd=b.dataset.id,marcar=function(){items.forEach(function(i){if(i.id===idd)i.estado='Entregada'});save();render();toast('Marcada como entregada')};
+    if(CLOUD)sb.from('licitaciones').update({estado:'Entregada'}).eq('id',idd).then(function(r){if(r.error){toast('No se pudo guardar. Intenta de nuevo.');return}marcar()});
+    else marcar();
+  }
+  else if(a==='del'){
+    var idq=b.dataset.id,quitar=function(){items=items.filter(function(i){return i.id!==idq});save();render()};
+    if(CLOUD)sb.from('licitaciones').delete().eq('id',idq).then(function(r){if(r.error){toast('No se pudo quitar. Intenta de nuevo.');return}quitar()});
+    else quitar();
+  }
+  else if(a==='login'){sb.auth.signInWithOAuth({provider:'azure',options:{scopes:'email',redirectTo:location.origin+location.pathname}}).then(function(r){if(r.error)showLogin('No se pudo iniciar sesión. Intenta de nuevo.')})}
+  else if(a==='logout'){sb.auth.signOut().then(function(){USER=null;items=[];showLogin()})}
+  else if(a==='testmail'){b.disabled=true;sb.functions.invoke('send-alerts',{body:{test:true}}).then(function(r){b.disabled=false;toast(r.error?'No se pudo enviar la prueba. Revisa la configuración del correo.':'Listo. Revisa tu bandeja de entrada y el correo no deseado.')})}
   else if(a==='dismiss'){S.dismissed=true;render()}
   else if(a==='sync'){sync()}
   else if(a==='reset'){items=sample();save();render();toast('Ejemplos restaurados')}
@@ -630,8 +784,29 @@ document.addEventListener('change',function(ev){
   save();render();
 });
 document.getElementById('q').addEventListener('input',function(e){S.q=e.target.value;if(S.view!=='inicio'&&S.view!=='licitaciones')S.view='inicio';render();var q=document.getElementById('q');q.focus()});
-document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&S.kpi){S.kpi=null;renderModal()}});
+document.addEventListener('input',function(ev){
+  var t=ev.target;if(!DP||DP.kind!=='time'||(t.id!=='t_h'&&t.id!=='t_m'))return;
+  var v=parseInt(t.value,10);
+  if(t.id==='t_h'&&v>=1&&v<=12)DP.h=v;else if(t.id==='t_m'&&v>=0&&v<=59)DP.mi=v;else return;
+  tapply();
+});
+document.addEventListener('keydown',function(ev){
+  var t=ev.target;
+  if(ev.key==='Enter'&&DP&&DP.kind==='time'&&(t.id==='t_h'||t.id==='t_m')){ev.preventDefault();dpClose()}
+});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(DP)dpClose();else if(S.kpi){S.kpi=null;renderModal()}}});
 render();
+if(CLOUD){
+  document.querySelector('.app').hidden=true;
+  if(!sb){showLogin('No se pudo cargar el servicio de inicio de sesión. Revisa tu conexión y recarga la página.')}
+  else{
+    sb.auth.onAuthStateChange(function(ev,session){
+      if(ev==='SIGNED_IN'&&USER&&session&&session.user.id===USER.id)return;
+      if(ev!=='INITIAL_SESSION'&&ev!=='SIGNED_IN'&&ev!=='SIGNED_OUT')return;
+      setTimeout(function(){enterApp(session)},0);
+    });
+  }
+}
 setInterval(function(){renderBell()},60000);
 })();
 </script>
