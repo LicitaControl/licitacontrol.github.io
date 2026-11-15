@@ -163,6 +163,9 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
 .dots{display:none}
 .dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);display:block}
 .dots i.entrega{background:var(--warn)}.dots i.vencida{background:var(--crit)}
+button.remb{width:100%;background:none;border:0;border-top:1px solid var(--line);text-align:left;color:var(--fg);border-radius:0}
+.list>button.remb:first-child{border-top:0}
+button.remb:hover{background:var(--surface2)}
 button.kpi{width:100%;text-align:left;cursor:pointer;color:var(--fg)}
 button.kpi:hover{border-color:var(--accent)}
 .kpi .d u{color:var(--accent)}
@@ -224,20 +227,21 @@ var TODAY=dayStart(new Date());
 function diff(s){return Math.round((parse(s)-TODAY)/86400000)}
 function fmt(s){var d=parse(s);return d.getDate()+' '+MES[d.getMonth()].slice(0,3)+' '+d.getFullYear()}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function money(n){return n?'₡'+Number(n).toLocaleString('es-CR'):'—'}
+var TIPOS={reducida:'Licitación reducida',menor:'Licitación menor',mayor:'Licitación mayor'};
+function tipoTxt(t){return TIPOS[t]||'—'}
 
 function sample(){
   var o=function(n){return iso(addDays(TODAY,n))};
   return [
-   {id:'s1',num:'2026LN-000014-0001100001',inst:'Municipalidad de Escazú',obj:'Suministro de mobiliario de oficina',estado:'Activa',apertura:o(2),entrega:o(9),monto:18500000,ej:1},
-   {id:'s2',num:'2026LA-000231-0000200012',inst:'Caja Costarricense de Seguro Social',obj:'Compra de insumos de laboratorio',estado:'Activa',apertura:o(0),entrega:o(5),monto:64200000,ej:1},
-   {id:'s3',num:'2026LD-000087-0002300001',inst:'Instituto Costarricense de Electricidad',obj:'Servicio de mantenimiento de equipo de cómputo',estado:'Activa',apertura:o(6),entrega:o(1),monto:9800000,ej:1},
-   {id:'s4',num:'2026LN-000052-0000400009',inst:'Ministerio de Obras Públicas y Transportes',obj:'Señalización vial, ruta nacional 2',estado:'Activa',apertura:o(-3),entrega:o(13),monto:122000000,ej:1},
-   {id:'s5',num:'2026LA-000118-0001200003',inst:'Universidad de Costa Rica',obj:'Licencias de software académico',estado:'Entregada',apertura:o(-12),entrega:o(-4),monto:15300000,ej:1},
-   {id:'s6',num:'2026LD-000009-0003100002',inst:'Municipalidad de Alajuela',obj:'Papelería y útiles de oficina',estado:'Entregada',apertura:o(-20),entrega:o(-9),monto:3100000,ej:1},
-   {id:'s7',num:'2026LA-000301-0000800005',inst:'Ministerio de Educación Pública',obj:'Equipo audiovisual para aulas',estado:'Activa',apertura:o(-8),entrega:o(-1),monto:41700000,ej:1},
-   {id:'s8',num:'2026LN-000066-0000900004',inst:'Instituto Nacional de Seguros',obj:'Servicio de limpieza de edificios',estado:'Activa',apertura:o(15),entrega:o(24),monto:27900000,ej:1},
-   {id:'s9',num:'2026LD-000140-0001700008',inst:'Acueductos y Alcantarillados',obj:'Tubería PVC y accesorios',estado:'Entregada',apertura:o(-25),entrega:o(-14),monto:22000000,ej:1}
+   {id:'s1',num:'2026LN-000014-0001100001',inst:'Municipalidad de Escazú',obj:'Suministro de mobiliario de oficina',estado:'Activa',apertura:o(2),entrega:o(9),tipo:'menor',ej:1},
+   {id:'s2',num:'2026LA-000231-0000200012',inst:'Caja Costarricense de Seguro Social',obj:'Compra de insumos de laboratorio',estado:'Activa',apertura:o(0),entrega:o(5),tipo:'mayor',ej:1},
+   {id:'s3',num:'2026LD-000087-0002300001',inst:'Instituto Costarricense de Electricidad',obj:'Servicio de mantenimiento de equipo de cómputo',estado:'Activa',apertura:o(6),entrega:o(1),tipo:'reducida',ej:1},
+   {id:'s4',num:'2026LN-000052-0000400009',inst:'Ministerio de Obras Públicas y Transportes',obj:'Señalización vial, ruta nacional 2',estado:'Activa',apertura:o(-3),entrega:o(13),tipo:'mayor',ej:1},
+   {id:'s5',num:'2026LA-000118-0001200003',inst:'Universidad de Costa Rica',obj:'Licencias de software académico',estado:'Entregada',apertura:o(-12),entrega:o(-4),tipo:'menor',ej:1},
+   {id:'s6',num:'2026LD-000009-0003100002',inst:'Municipalidad de Alajuela',obj:'Papelería y útiles de oficina',estado:'Entregada',apertura:o(-20),entrega:o(-9),tipo:'reducida',ej:1},
+   {id:'s7',num:'2026LA-000301-0000800005',inst:'Ministerio de Educación Pública',obj:'Equipo audiovisual para aulas',estado:'Activa',apertura:o(-8),entrega:o(-1),tipo:'mayor',ej:1},
+   {id:'s8',num:'2026LN-000066-0000900004',inst:'Instituto Nacional de Seguros',obj:'Servicio de limpieza de edificios',estado:'Activa',apertura:o(15),entrega:o(24),tipo:'menor',ej:1},
+   {id:'s9',num:'2026LD-000140-0001700008',inst:'Acueductos y Alcantarillados',obj:'Tubería PVC y accesorios',estado:'Entregada',apertura:o(-25),entrega:o(-14),tipo:'menor',ej:1}
   ];
 }
 var store={get:function(k,d){try{var v=localStorage.getItem('lc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){try{localStorage.setItem('lc_'+k,JSON.stringify(v))}catch(e){}}};
@@ -315,6 +319,22 @@ function kpiRow(it){
 function renderModal(){
   var m=document.getElementById('modal');
   if(!S.kpi){m.hidden=true;m.innerHTML='';return}
+  if(S.kpi==='rem'){
+    var it=items.filter(function(i){return i.id===S.remId})[0];
+    if(!it){S.kpi=null;m.hidden=true;m.innerHTML='';return}
+    var isE=S.remT==='entrega',fd=isE?it.entrega:it.apertura,dd=diff(fd);
+    var th=(it.al&&it.al.length)?it.al:cfg.th;
+    m.hidden=false;
+    m.innerHTML='<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-label="Detalle del recordatorio"><div class="dh"><div><h2>'+(isE?'Entrega':'Apertura de ofertas')+'</h2><div class="m" style="color:var(--muted);font-size:12px">'+esc(it.num)+'</div></div><button class="btn sm x" data-act="closekpi">Cerrar</button></div>'+
+      '<div style="display:grid;gap:8px;margin:10px 0 14px">'+
+      '<div><div class="m" style="color:var(--muted);font-size:12px">Institución</div>'+esc(it.inst)+'</div>'+
+      '<div><div class="m" style="color:var(--muted);font-size:12px">Objeto</div>'+esc(it.obj)+'</div>'+
+      '<div><div class="m" style="color:var(--muted);font-size:12px">Tipo</div>'+tipoTxt(it.tipo)+'</div>'+
+      '<div><div class="m" style="color:var(--muted);font-size:12px">'+(isE?'Fecha de entrega':'Fecha de apertura')+'</div>'+fmt(fd)+' <span class="pill '+(it.estado==='Entregada'?'ok':dd<=1?'crit':dd<=3?'warn':'')+'">'+(it.estado==='Entregada'&&isE?'Entregada':when(dd))+'</span></div>'+
+      '<div><div class="m" style="color:var(--muted);font-size:12px">Alerta</div>'+alertTxt(it)+'</div></div>'+
+      '<div class="acts" style="margin:0;justify-content:flex-start"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(it.estado!=='Entregada'?'<button class="btn sm pri" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div></div>';
+    return;
+  }
   var list=kpiItems(S.kpi),t=KT[S.kpi];
   m.hidden=false;
   m.innerHTML='<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-label="'+t[0]+'"><div class="dh"><div><h2>'+t[0]+' · '+list.length+'</h2><div class="m" style="color:var(--muted);font-size:12px">'+t[1]+'</div></div><button class="btn sm x" data-act="closekpi">Cerrar</button></div><div class="list">'+
@@ -437,7 +457,7 @@ function remindersCard(){
   var up=events().filter(function(e){return !e.done&&matches(e.it)&&diff(e.fecha)>=-3}).sort(function(a,b){return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0}).slice(0,6);
   return '<div class="card"><h2 style="margin-bottom:6px">Recordatorios</h2><div class="list">'+(up.length?up.map(function(e){
     var d=diff(e.fecha),c=evClass(e)||e.tipo;
-    return '<div class="item"><div class="dot '+c+'">'+ICON[e.tipo==='entrega'?'doc':'gavel']+'</div><div><div class="m">'+fmt(e.fecha)+'</div><div class="t">'+esc(e.it.num.split('-')[1]?e.it.num:e.it.num)+'</div><div class="m">'+evLabel(e)+' · <b>'+when(d)+'</b></div></div></div>';
+    return '<button type="button" class="item remb" data-act="rem" data-id="'+e.it.id+'" data-t="'+e.tipo+'" aria-label="Ver detalle: '+evLabel(e)+' '+esc(e.it.num)+'"><div class="dot '+c+'">'+ICON[e.tipo==='entrega'?'doc':'gavel']+'</div><div style="min-width:0"><div class="m">'+fmt(e.fecha)+'</div><div class="t">'+esc(e.it.num)+'</div><div class="m">'+evLabel(e)+' · <b>'+when(d)+'</b></div></div></button>';
   }).join(''):'<div class="empty">Sin recordatorios pendientes.</div>')+'</div></div>';
 }
 function bannerHtml(){
@@ -471,22 +491,25 @@ function alertTxt(it){
 function vLic(){
   var rows=items.filter(matches).sort(function(a,b){return a.entrega<b.entrega?-1:1});
   return '<div><h1>Licitaciones</h1><p class="sub">Registra procesos a mano o tráelos desde SICOP. Los de ejemplo se pueden borrar.</p></div>'+
-  '<div class="card"><h2 style="margin-bottom:10px">Agregar licitación</h2><form class="f" id="addf">'+
-   '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001"></label>'+
-   '<label class="fl">Institución<input id="f_inst" required placeholder="Municipalidad de…"></label>'+
-   '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata"></label>'+
+  '<div class="card"><h2 style="margin-bottom:10px">Agregar licitación</h2><form class="f" id="addf" style="align-items:start">'+
+   '<div style="grid-column:1/-1;display:grid;gap:10px">'+
+     '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001"></label>'+
+     '<label class="fl">Institución<input id="f_inst" required placeholder="Municipalidad de…"></label>'+
+     '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata"></label></div>'+
    '<label class="fl">Apertura de ofertas<input id="f_ap" type="date" required></label>'+
    '<label class="fl">Fecha de entrega<input id="f_en" type="date" required></label>'+
-   '<label class="fl">Monto estimado en ₡ (opcional)<input id="f_mo" type="number" min="0" step="1000" placeholder="Puedes dejarlo vacío"></label>'+
+   '<label class="fl">Tipo<select id="f_tipo" required><option value="">Elige el tipo</option><option value="reducida">Licitación reducida</option><option value="menor">Licitación menor</option><option value="mayor">Licitación mayor</option></select></label>'+
    '<fieldset style="border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend>'+
-     '<label class="chk"><input type="checkbox" name="f_al" value="5">5 días antes</label>'+
+     '<label class="chk"><input type="checkbox" name="f_al" value="7">7 días antes</label>'+
      '<label class="chk"><input type="checkbox" name="f_al" value="3" checked>3 días antes</label>'+
-     '<label class="chk"><input type="checkbox" name="f_al" value="0">El mismo día</label></fieldset>'+
+     '<label class="chk"><input type="checkbox" name="f_al" value="0">El mismo día</label>'+
+     '<label class="chk"><input type="checkbox" id="f_cuson">Personalizado</label>'+
+     '<div style="display:flex;align-items:center;gap:6px;padding-bottom:6px"><input id="f_cus" type="number" min="1" max="90" step="1" placeholder="Ej. 10" disabled aria-label="Días de anticipación personalizados" style="width:90px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg)"><span style="color:var(--muted);font-size:12px">días antes</span></div></fieldset>'+
    '<label class="fl">Hora de la alerta<input id="f_hora" type="time" value="08:00" required></label>'+
    '<button class="btn pri" type="submit">Agregar</button></form></div>'+
-  '<div class="card"><div class="tablewrap"><table><thead><tr><th>Procedimiento</th><th>Institución y objeto</th><th>Apertura</th><th>Entrega</th><th>Monto</th><th>Alerta</th><th>Estado</th><th></th></tr></thead><tbody>'+
+  '<div class="card"><div class="tablewrap"><table><thead><tr><th>Procedimiento</th><th>Institución y objeto</th><th>Apertura</th><th>Entrega</th><th>Tipo</th><th>Alerta</th><th>Estado</th><th></th></tr></thead><tbody>'+
    (rows.length?rows.map(function(it){
-     return '<tr><td><b>'+esc(it.num)+'</b>'+(it.ej?'<div class="m" style="color:var(--muted);font-size:11px">ejemplo</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td class="num2">'+money(it.monto)+'</td><td class="num2">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap">'+
+     return '<tr><td><b>'+esc(it.num)+'</b>'+(it.ej?'<div class="m" style="color:var(--muted);font-size:11px">ejemplo</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td>'+tipoTxt(it.tipo)+'</td><td class="num2">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap">'+
        (it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
    }).join(''):'<tr><td colspan="8" class="empty">No hay licitaciones que coincidan.</td></tr>')+'</tbody></table></div></div>';
 }
@@ -520,7 +543,7 @@ function vSicop(){
    '<li>Una página web sola no puede leer SICOP: el navegador bloquea esas consultas. Hace falta un pequeño servidor propio (backend) que consulte la fuente, guarde los carteles y envíe los avisos.</li>'+
    '<li>Antes de automatizar, confirma los términos de uso de SICOP. Si el acceso es solo por la plataforma con tu usuario de proveedor, el servidor debe respetarlo.</li>'+
    '<li>Esta página ya espera un servicio con la forma de abajo. Cuando lo tengas, pega su dirección y pulsa Sincronizar.</li></ol></div>'+
-   '<div class="card"><h2 style="margin-bottom:8px">Formato esperado</h2><pre>GET {tu-servidor}/licitaciones\n[\n  {\n    "num": "2026LN-000014-0001100001",\n    "inst": "Municipalidad de Escazú",\n    "obj": "Suministro de mobiliario",\n    "estado": "Activa",\n    "apertura": "2026-11-16",\n    "entrega": "2026-11-23",\n    "monto": 18500000\n  }\n]</pre></div></div>'+
+   '<div class="card"><h2 style="margin-bottom:8px">Formato esperado</h2><pre>GET {tu-servidor}/licitaciones\n[\n  {\n    "num": "2026LN-000014-0001100001",\n    "inst": "Municipalidad de Escazú",\n    "obj": "Suministro de mobiliario",\n    "estado": "Activa",\n    "apertura": "2026-11-16",\n    "entrega": "2026-11-23",\n    "tipo": "menor"\n  }\n]</pre></div></div>'+
   '<div class="card"><h2 style="margin-bottom:8px">Sincronizar</h2><label class="fl">Dirección de tu servidor<input id="backend" type="url" placeholder="https://mi-servidor.cr/api" value="'+esc(cfg.backend)+'"></label>'+
    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn pri" data-act="sync">Sincronizar ahora</button><button class="btn" data-act="reset">Restaurar ejemplos</button></div>'+
    '<p class="sub" id="syncMsg" style="margin-top:10px">Esta vista previa bloquea conexiones externas. La sincronización funciona cuando publiques la página en tu propio sitio.</p></div></div>';
@@ -534,12 +557,19 @@ function render(){
   renderBell();
   renderModal();
   var f=document.getElementById('addf');
+  var co=document.getElementById('f_cuson');
+  if(co)co.addEventListener('change',function(){var ci=document.getElementById('f_cus');ci.disabled=!co.checked;if(co.checked)ci.focus()});
   if(f)f.addEventListener('submit',function(ev){
     ev.preventDefault();
     var g=function(i){return document.getElementById(i).value.trim()};
     var al=Array.prototype.slice.call(f.querySelectorAll('input[name="f_al"]:checked')).map(function(c){return +c.value});
+    if(document.getElementById('f_cuson').checked){
+      var cv=parseInt(document.getElementById('f_cus').value,10);
+      if(!(cv>=1&&cv<=90)){toast('Escribe los días personalizados, de 1 a 90');return}
+      if(al.indexOf(cv)<0)al.push(cv);
+    }
     if(!al.length){toast('Elige cuándo quieres la alerta');return}
-    items.push({id:'u'+Date.now(),num:g('f_num'),inst:g('f_inst'),obj:g('f_obj'),estado:'Activa',apertura:g('f_ap'),entrega:g('f_en'),monto:+g('f_mo')||0,al:al,hora:g('f_hora')||'08:00'});
+    items.push({id:'u'+Date.now(),num:g('f_num'),inst:g('f_inst'),obj:g('f_obj'),estado:'Activa',apertura:g('f_ap'),entrega:g('f_en'),tipo:g('f_tipo'),al:al,hora:g('f_hora')||'08:00'});
     save();render();toast('Licitación agregada');
   });
 }
@@ -555,8 +585,8 @@ function sync(){
     var n=0;arr.forEach(function(x){
       if(!x.num||!x.apertura||!x.entrega)return;
       var ex=items.filter(function(i){return i.num===x.num})[0];
-      if(ex){ex.estado=x.estado||ex.estado;ex.apertura=x.apertura;ex.entrega=x.entrega;ex.monto=x.monto||ex.monto}
-      else items.push({id:'x'+x.num,num:x.num,inst:x.inst||'',obj:x.obj||'',estado:x.estado||'Activa',apertura:x.apertura,entrega:x.entrega,monto:x.monto||0});
+      if(ex){ex.estado=x.estado||ex.estado;ex.apertura=x.apertura;ex.entrega=x.entrega;ex.tipo=x.tipo||ex.tipo}
+      else items.push({id:'x'+x.num,num:x.num,inst:x.inst||'',obj:x.obj||'',estado:x.estado||'Activa',apertura:x.apertura,entrega:x.entrega,tipo:x.tipo||''});
       n++;
     });
     items=items.filter(function(i){return !i.ej||!n});
@@ -577,6 +607,7 @@ document.addEventListener('click',function(ev){
   if(a==='pyear'){S.pyear+=+b.dataset.n;render();return}
   if(a==='pmonth'){S.cur=new Date(S.pyear,+b.dataset.m,1);S.pick=false;render();return}
   if(a==='kpi'){S.kpi=b.dataset.k;renderModal();var xb=document.querySelector('.dlg .x');if(xb)xb.focus();return}
+  if(a==='rem'){S.kpi='rem';S.remId=b.dataset.id;S.remT=b.dataset.t;renderModal();var xr=document.querySelector('.dlg .x');if(xr)xr.focus();return}
   if(a==='closekpi'){S.kpi=null;renderModal();return}
   if(a==='afilter'){S.af=b.dataset.f;render();return}
   if(a==='gocal'){var gd=parse(b.dataset.d);S.kpi=null;S.view='inicio';S.sel=b.dataset.d;S.cur=new Date(gd.getFullYear(),gd.getMonth(),1);render();var mm=document.querySelector('.month');if(mm)mm.scrollIntoView({block:'center'});return}
