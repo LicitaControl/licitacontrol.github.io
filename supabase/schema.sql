@@ -1,4 +1,5 @@
 -- LicitaControl: tablas y permisos. Pegar completo en Supabase > SQL Editor > Run.
+-- Se puede ejecutar más de una vez sin error: lo que ya existe se conserva o se actualiza.
 
 -- Perfil de cada usuario (guarda su correo para los avisos)
 create table if not exists public.perfiles (
@@ -7,6 +8,7 @@ create table if not exists public.perfiles (
   created_at timestamptz not null default now()
 );
 alter table public.perfiles enable row level security;
+drop policy if exists "ver mi perfil" on public.perfiles;
 create policy "ver mi perfil" on public.perfiles for select using (auth.uid() = user_id);
 
 create or replace function public.crear_perfil() returns trigger
@@ -57,7 +59,17 @@ create table if not exists public.licitaciones (
   created_at timestamptz not null default now(),
   unique (user_id, num)
 );
+-- Por si la tabla se creó con una versión anterior de este archivo
+alter table public.licitaciones
+  add column if not exists al_apertura int[] not null default '{3}',
+  add column if not exists hora_apertura time not null default '08:00',
+  add column if not exists al_entrega int[] not null default '{3}',
+  add column if not exists hora_entrega time not null default '08:00',
+  add column if not exists editada_en timestamptz,
+  add column if not exists entregada_en timestamptz;
+alter table public.licitaciones drop column if exists al, drop column if exists hora;
 alter table public.licitaciones enable row level security;
+drop policy if exists "mis licitaciones" on public.licitaciones;
 create policy "mis licitaciones" on public.licitaciones
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 

@@ -298,7 +298,7 @@ function sample(){
 var store={get:function(k,d){try{var v=localStorage.getItem('lc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){try{localStorage.setItem('lc_'+k,JSON.stringify(v))}catch(e){}}};
 /* Nube: pega aquí la dirección y la clave pública (anon) de tu proyecto de Supabase.
    Con los dos vacíos la página funciona sin inicio de sesión y guarda en este navegador. */
-var SB_URL='', SB_KEY='';
+var SB_URL='https://ootvayyyfmndjcqsdfsd.supabase.co', SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHZheXl5Zm1uZGpjcXNkZnNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3ODk0OTIsImV4cCI6MjExMDM2NTQ5Mn0.9Ozot72J-Rfo6bcwx_yrE2hqZdsPt_844eY8x5SjUEs';
 var CLOUD=!!(SB_URL&&SB_KEY);
 var sb=null, USER=null;
 if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
