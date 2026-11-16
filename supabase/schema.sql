@@ -33,8 +33,12 @@ create table if not exists public.licitaciones (
   estado text not null default 'Activa' check (estado in ('Activa', 'Entregada')),
   apertura date not null,
   entrega date not null,
-  al int[] not null default '{3}',
-  hora time not null default '08:00',
+  al_apertura int[] not null default '{3}',
+  hora_apertura time not null default '08:00',
+  al_entrega int[] not null default '{3}',
+  hora_entrega time not null default '08:00',
+  editada_en timestamptz,
+  entregada_en timestamptz,
   created_at timestamptz not null default now(),
   unique (user_id, num)
 );

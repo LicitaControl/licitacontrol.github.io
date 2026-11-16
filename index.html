@@ -173,6 +173,20 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
 .av{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
 .uemail{font-size:12px;color:var(--muted);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:820px){.uemail{display:none}}
+.search{position:relative}
+.sres{position:absolute;top:100%;left:0;right:0;margin-top:4px;z-index:45;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.2);max-height:360px;overflow:auto}
+.sr{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 12px;color:var(--fg);border-radius:0}
+.sr:last-child{border-bottom:0}
+.sr:hover,.sr:focus-visible{background:var(--surface2)}
+.week .wd[data-act]{cursor:pointer}
+.week .wd[data-act]:hover{filter:brightness(.97)}
+.week .wd.sel{outline:2px solid var(--accent);outline-offset:-2px}
+.lnk{background:none;border:0;padding:0;font-weight:700;color:var(--fg);text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.lnk:hover{color:var(--accent);text-decoration-color:var(--accent)}
+.pill.ed{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.avg{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.avc{display:flex;flex-direction:column;gap:2px;min-width:0}
+.avc>b{margin-bottom:4px}
 .dpw{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0;position:relative}
 .dpb{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--muted);text-align:left;font-size:14px}
 .dpb:hover{border-color:var(--accent)}
@@ -225,7 +239,7 @@ button.kpi:hover{border-color:var(--accent)}
   </aside>
   <main>
     <header class="top">
-      <div class="search"><input id="q" type="search" placeholder="Buscar licitaciones" aria-label="Buscar licitaciones"></div>
+      <div class="search"><input id="q" type="search" placeholder="Buscar licitaciones" aria-label="Buscar licitaciones" autocomplete="off"><div class="sres" id="sres" hidden></div></div>
       <div class="grow"></div>
       <div style="position:relative">
         <button class="ibtn" id="bell" aria-label="Notificaciones">
@@ -295,9 +309,10 @@ var sb=null, USER=null;
 if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
 var items=CLOUD?[]:(store.get('items',null)||sample());
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
-var S={view:'inicio',cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
+var S={view:'inicio',wsel:iso(TODAY),histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false};
 function save(){if(!CLOUD)store.set('items',items);store.set('cfg',cfg)}
-function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,al:(r.al&&r.al.length)?r.al:[3],hora:(r.hora||'08:00').slice(0,5)}}
+function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en}}
+function toRow(it){return {num:it.num,inst:it.inst,obj:it.obj,tipo:it.tipo,apertura:it.apertura,entrega:it.entrega,al_apertura:it.alA,hora_apertura:it.horaA,al_entrega:it.alE,hora_entrega:it.horaE}}
 function dbLoad(){
   return sb.from('licitaciones').select('*').order('entrega',{ascending:true}).then(function(r){
     if(r.error)throw r.error;
@@ -338,7 +353,7 @@ function events(){
   return ev;
 }
 function matches(it){
-  if(!S.q)return true;var q=S.q.toLowerCase();
+  if(S.view!=='licitaciones'||!S.q)return true;var q=S.q.toLowerCase();
   return (it.num+' '+it.inst+' '+it.obj).toLowerCase().indexOf(q)>-1;
 }
 function evClass(e){
@@ -352,8 +367,8 @@ function alerts(){
     var d=diff(e.fecha);
     if(e.tipo==='entrega'&&d<0){out.push({e:e,d:d,sev:'crit'});return}
     if(d<0)return;
-    var th=(e.it.al&&e.it.al.length)?e.it.al:cfg.th;
-    var hm=(e.it.hora||'00:00').split(':');
+    var th=alOf(e.it,e.tipo);if(!th.length)return;
+    var hm=horaOf(e.it,e.tipo).split(':');
     var maxN=Math.max.apply(null,th);
     var trig=new Date(parse(e.fecha).getFullYear(),parse(e.fecha).getMonth(),parse(e.fecha).getDate()-maxN,+hm[0],+hm[1]);
     if(now>=trig){out.push({e:e,d:d,sev:d<=1?'crit':'warn'})}
@@ -363,6 +378,13 @@ function alerts(){
 }
 function when(d){return d<0?'Vencida hace '+(-d)+(d===-1?' día':' días'):d===0?'Hoy':d===1?'Mañana':'En '+d+' días'}
 function evLabel(e){return (e.tipo==='entrega'?'Entrega':'Apertura de ofertas')}
+/* Avisos: uno para la apertura y otro para la entrega. Las licitaciones viejas usaban uno solo (al, hora). */
+function alOf(it,t){var a=t==='apertura'?it.alA:it.alE;if(a)return a;return (it.al&&it.al.length)?it.al:[3]}
+function horaOf(it,t){return (t==='apertura'?it.horaA:it.horaE)||it.hora||'08:00'}
+function fmtDT(s){var d=new Date(s);if(isNaN(d))return '';var h=d.getHours();return d.getDate()+' '+MES[d.getMonth()].slice(0,3)+' '+d.getFullYear()+', '+(h%12||12)+':'+tpad(d.getMinutes())+' '+(h>=12?'PM':'AM')}
+function alertTxtT(it,t){var th=alOf(it,t);if(!th.length)return 'sin aviso';return th.slice().sort(function(a,b){return b-a}).map(function(n){return n===0?'mismo día':n+' d'}).join(', ')+' · '+t12(horaOf(it,t))}
+function alertTxt(it){return 'Apertura: '+alertTxtT(it,'apertura')+'<br>Entrega: '+alertTxtT(it,'entrega')}
+function goHist(id){var q=document.getElementById('q');S.histId=id;S.view='historial';S.q='';q.value='';S.bell=false;S.kpi=null;render();window.scrollTo(0,0)}
 
 /* kpis */
 /* Cada licitación cuenta en una sola tarjeta. Prioridad: entregada, por vencer, apertura próxima, activa. */
@@ -401,7 +423,6 @@ function renderModal(){
     var it=items.filter(function(i){return i.id===S.remId})[0];
     if(!it){S.kpi=null;m.hidden=true;m.innerHTML='';return}
     var isE=S.remT==='entrega',fd=isE?it.entrega:it.apertura,dd=diff(fd);
-    var th=(it.al&&it.al.length)?it.al:cfg.th;
     m.hidden=false;
     m.innerHTML='<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-label="Detalle del recordatorio"><div class="dh"><div><h2>'+(isE?'Entrega':'Apertura de ofertas')+'</h2><div class="m" style="color:var(--muted);font-size:12px">'+esc(it.num)+'</div></div><button class="btn sm x" data-act="closekpi">Cerrar</button></div>'+
       '<div style="display:grid;gap:8px;margin:10px 0 14px">'+
@@ -409,8 +430,8 @@ function renderModal(){
       '<div><div class="m" style="color:var(--muted);font-size:12px">Objeto</div>'+esc(it.obj)+'</div>'+
       '<div><div class="m" style="color:var(--muted);font-size:12px">Tipo</div>'+tipoTxt(it.tipo)+'</div>'+
       '<div><div class="m" style="color:var(--muted);font-size:12px">'+(isE?'Fecha de entrega':'Fecha de apertura')+'</div>'+fmt(fd)+' <span class="pill '+(it.estado==='Entregada'?'ok':dd<=1?'crit':dd<=3?'warn':'')+'">'+(it.estado==='Entregada'&&isE?'Entregada':when(dd))+'</span></div>'+
-      '<div><div class="m" style="color:var(--muted);font-size:12px">Alerta</div>'+alertTxt(it)+'</div></div>'+
-      '<div class="acts" style="margin:0;justify-content:flex-start"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(it.estado!=='Entregada'?'<button class="btn sm pri" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div></div>';
+      '<div><div class="m" style="color:var(--muted);font-size:12px">Aviso</div>'+alertTxtT(it,S.remT)+'</div>'+(it.editada?'<div><span class="pill ed">Editada</span> '+fmtDT(it.editada)+'</div>':'')+'</div>'+
+      '<div class="acts" style="margin:0;justify-content:flex-start"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button><button class="btn sm" data-act="hist" data-id="'+it.id+'">Ver historial</button><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button>'+(it.estado!=='Entregada'?'<button class="btn sm pri" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div></div>';
     return;
   }
   var list=kpiItems(S.kpi),t=KT[S.kpi];
@@ -442,7 +463,7 @@ function alertItem(x){
 function chip(e){
   var cls=evClass(e);
   var tx=(e.tipo==='entrega'?'Entrega ':'Apertura ')+e.it.num.split('-')[1];
-  return '<button class="chip '+(cls||(e.tipo==='entrega'?'entrega':''))+'" data-act="day" data-d="'+e.fecha+'" title="'+esc(evLabel(e)+' · '+e.it.inst)+'">'+esc(tx)+'</button>';
+  return '<span class="chip '+(cls||(e.tipo==='entrega'?'entrega':''))+'" title="'+esc(evLabel(e)+' · '+e.it.inst)+'">'+esc(tx)+'</span>';
 }
 var FLAG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/></svg>';
 var MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
@@ -485,9 +506,13 @@ function weekHtml(){
   for(var i=0;i<7;i++){
     var d=addDays(ws,i),s=iso(d),es=ev.filter(function(e){return e.fecha===s});
     var hw=hol(s);
-    h+='<div class="wd'+(i>5?' we':'')+(hw?' feri':'')+(s===iso(TODAY)?' hoy':'')+'"><div class="h"><span>'+DIAS[i].slice(0,3)+(hw?' <span class="hf" style="display:inline-grid;vertical-align:-2px" title="'+esc(hw.n)+'">'+FLAG+'</span>':'')+(!hw&&i===6?' <span class="rf" style="display:inline-grid;vertical-align:-2px" title="Día de descanso">'+MOON+'</span>':'')+'</span><b>'+d.getDate()+'</b></div>'+(hw?'<span class="holn">'+esc(hw.n)+'</span>':'')+(!hw&&i===6?'<span class="holn" style="color:var(--muted)">Descanso</span>':'')+es.slice(0,3).map(chip).join('')+(es.length>3?'<span class="more">+'+(es.length-3)+' más</span>':'')+'</div>';
+    h+='<div class="wd'+(i>5?' we':'')+(hw?' feri':'')+(s===iso(TODAY)?' hoy':'')+(s===S.wsel?' sel':'')+'" role="button" tabindex="0" data-act="wday" data-d="'+s+'" aria-label="'+DIAS[i]+' '+d.getDate()+', '+es.length+' eventos"><div class="h"><span>'+DIAS[i].slice(0,3)+(hw?' <span class="hf" style="display:inline-grid;vertical-align:-2px" title="'+esc(hw.n)+'">'+FLAG+'</span>':'')+(!hw&&i===6?' <span class="rf" style="display:inline-grid;vertical-align:-2px" title="Día de descanso">'+MOON+'</span>':'')+'</span><b>'+d.getDate()+'</b></div>'+(hw?'<span class="holn">'+esc(hw.n)+'</span>':'')+(!hw&&i===6?'<span class="holn" style="color:var(--muted)">Descanso</span>':'')+es.slice(0,3).map(chip).join('')+(es.length>3?'<span class="more">+'+(es.length-3)+' más</span>':'')+'</div>';
   }
   return '<div class="week">'+h+'</div>';
+}
+function weekCard(){
+  var ws=weekStart(TODAY),we=addDays(ws,6);
+  return '<div class="card"><h2 style="margin-bottom:10px">Esta semana <span style="color:var(--muted);font-weight:400;font-size:13px">· '+ws.getDate()+' al '+we.getDate()+' de '+MES[we.getMonth()]+'</span></h2>'+weekHtml()+dayPanel(S.wsel)+'</div>';
 }
 function monthHtml(){
   var y=S.cur.getFullYear(),m=S.cur.getMonth();
@@ -506,16 +531,16 @@ function monthHtml(){
   }
   return '<div class="month">'+h+'</div>';
 }
-function dayDetail(){
-  var es=events().filter(function(e){return e.fecha===S.sel&&matches(e.it)});
-  var d=parse(S.sel);
-  return '<div style="margin-top:14px"><h2>'+DIAS[(d.getDay()+6)%7]+' '+d.getDate()+' de '+MES[d.getMonth()]+'</h2><div style="margin:6px 0">'+dayStatus(S.sel)+'</div>'+
+function dayPanel(s){
+  var es=events().filter(function(e){return e.fecha===s&&matches(e.it)});
+  var d=parse(s);
+  return '<div style="margin-top:14px"><h2>'+DIAS[(d.getDay()+6)%7]+' '+d.getDate()+' de '+MES[d.getMonth()]+'</h2><div style="margin:6px 0">'+dayStatus(s)+'</div>'+
    (es.length?'<div class="list">'+es.map(function(e){
      var c=evClass(e)||e.tipo;
-     return '<div class="item"><div class="dot '+(c==='hecha'?'':c)+'">'+ICON[e.tipo==='entrega'?'doc':'gavel']+'</div><div><div class="t">'+evLabel(e)+' · '+esc(e.it.num)+'</div><div class="m">'+esc(e.it.inst)+' — '+esc(e.it.obj)+'</div></div>'+
-       (e.tipo==='entrega'&&!e.done?'<div class="acts"><button class="btn sm" data-act="done" data-id="'+e.it.id+'">Marcar entregada</button></div>':'')+'</div>';
+     return '<button type="button" class="item remb" data-act="rem" data-id="'+e.it.id+'" data-t="'+e.tipo+'"><div class="dot '+(c==='hecha'?'':c)+'">'+ICON[e.tipo==='entrega'?'doc':'gavel']+'</div><div style="min-width:0"><div class="t">'+evLabel(e)+' · '+esc(e.it.num)+'</div><div class="m">'+esc(e.it.inst)+' — '+esc(e.it.obj)+'</div></div></button>';
    }).join('')+'</div>':'<div class="empty">No hay eventos este día.</div>')+'</div>';
 }
+function dayDetail(){return dayPanel(S.sel)}
 function pickerHtml(){
   var h='<div class="pickwrap" style="position:relative"><button class="btn" data-act="pick" aria-label="Elegir mes y año" aria-expanded="'+(S.pick?'true':'false')+'" style="display:flex;align-items:center;height:100%"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>';
   if(S.pick){
@@ -551,7 +576,7 @@ function vInicio(){
   var k=kpis(),d=TODAY;
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+
-   '<div class="grid"><div class="col"><div class="card"><h2 style="margin-bottom:10px">Calendario de licitaciones semanal</h2>'+weekHtml()+'</div>'+calendarCard()+'</div>'+
+   '<div class="grid"><div class="col">'+weekCard()+calendarCard()+'</div>'+
    '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
@@ -561,34 +586,44 @@ function statusPill(it){
   if(d<=3)return '<span class="pill warn">Por vencer</span>';
   return '<span class="pill">Activa</span>';
 }
-function alertTxt(it){
-  var th=(it.al&&it.al.length)?it.al:cfg.th;
-  var t=th.slice().sort(function(a,b){return b-a}).map(function(n){return n===0?'mismo día':n+' d'}).join(', ');
-  return t+' · '+(it.hora||'00:00');
+var I_CAL='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+var I_CLOCK='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+var I_TAG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1"/></svg>';
+var I_CHEV='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg>';
+function dateField(id,label,val){return '<div class="dpw" data-for="'+id+'"><span>'+label+'</span><input type="hidden" id="'+id+'" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-for="'+id+'">'+I_CAL+'<span class="dpt">'+(val?fmt(val):'Elegir fecha')+'</span></button></div>'}
+function tipoField(val){return '<div class="dpw" data-for="f_tipo"><span>Tipo</span><input type="hidden" id="f_tipo" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-kind="tipo" data-for="f_tipo">'+I_TAG+'<span class="dpt">'+(TIPOS[val]||'Elige el tipo')+'</span>'+I_CHEV+'</button></div>'}
+function timeField(id,val){return '<div class="dpw" data-for="'+id+'"><span>Hora del aviso</span><input type="hidden" id="'+id+'" value="'+val+'"><button type="button" class="dpb has" data-act="dp" data-kind="time" data-for="'+id+'">'+I_CLOCK+'<span class="dpt">'+t12(val)+'</span>'+I_CHEV+'</button></div>'}
+function avisoCol(k,title,al,hora){
+  var std=[7,3,0],cus=al.filter(function(n){return std.indexOf(n)<0})[0];
+  return '<div class="avc"><b>'+title+'</b>'+std.map(function(n){
+    return '<label class="chk"><input type="checkbox" name="f_al_'+k+'" value="'+n+'"'+(al.indexOf(n)>-1?' checked':'')+'>'+(n===0?'El mismo día':n+' días antes')+'</label>';
+  }).join('')+
+  '<label class="chk"><input type="checkbox" id="f_cuson_'+k+'"'+(cus?' checked':'')+'>Personalizado</label>'+
+  '<div style="display:flex;align-items:center;gap:6px;padding-bottom:8px"><input id="f_cus_'+k+'" type="number" min="1" max="90" step="1" placeholder="Ej. 10" value="'+(cus||'')+'"'+(cus?'':' disabled')+' aria-label="Días personalizados" style="width:90px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg)"><span style="color:var(--muted);font-size:12px">días antes</span></div>'+
+  timeField('f_hora_'+k,hora)+'</div>';
+}
+function formHtml(it){
+  var e=!!it,v=it||{};
+  var alA=e?alOf(it,'apertura'):[3],alE=e?alOf(it,'entrega'):[3];
+  var hA=e?horaOf(it,'apertura'):'08:00',hE=e?horaOf(it,'entrega'):'08:00';
+  return '<div class="card" id="formcard"><h2 style="margin-bottom:10px">'+(e?'Editar licitación · '+esc(it.num):'Agregar licitación')+'</h2><form class="f" id="addf" style="align-items:start">'+
+   '<div style="grid-column:1/-1;display:grid;gap:10px">'+
+     '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001" value="'+esc(v.num||'')+'"></label>'+
+     '<label class="fl">Institución<input id="f_inst" required placeholder="Municipalidad de…" value="'+esc(v.inst||'')+'"></label>'+
+     '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata" value="'+esc(v.obj||'')+'"></label></div>'+
+   dateField('f_ap','Apertura de ofertas',v.apertura)+dateField('f_en','Fecha de entrega',v.entrega)+tipoField(v.tipo)+
+   '<fieldset style="grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend><div class="avg">'+avisoCol('a','De la apertura de ofertas',alA,hA)+avisoCol('e','De la entrega',alE,hE)+'</div></fieldset>'+
+   '<div style="display:flex;gap:8px;grid-column:1/-1;flex-wrap:wrap"><button class="btn pri" type="submit">'+(e?'Guardar cambios':'Agregar')+'</button>'+(e?'<button type="button" class="btn" data-act="canceledit">Cancelar</button>':'')+'</div>'+
+   '<p class="sub" style="grid-column:1/-1;margin:0">'+(CLOUD&&USER?'Los avisos llegarán a <b>'+esc(USER.email)+'</b>. <button type="button" class="btn sm" data-act="testmail">Enviarme un correo de prueba</button>':'Sin iniciar sesión, los avisos solo se ven dentro de la página.')+'</p></form></div>';
 }
 function vLic(){
   var rows=items.filter(matches).sort(function(a,b){return a.entrega<b.entrega?-1:1});
+  var cur=S.edit?items.filter(function(i){return i.id===S.edit})[0]:null;
   return '<div><h1>Licitaciones</h1><p class="sub">'+(CLOUD?'Registra tus procesos a mano o tráelos desde SICOP.':'Registra procesos a mano o tráelos desde SICOP. Los de ejemplo se pueden borrar.')+'</p></div>'+
-  '<div class="card"><h2 style="margin-bottom:10px">Agregar licitación</h2><form class="f" id="addf" style="align-items:start">'+
-   '<div style="grid-column:1/-1;display:grid;gap:10px">'+
-     '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001"></label>'+
-     '<label class="fl">Institución<input id="f_inst" required placeholder="Municipalidad de…"></label>'+
-     '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata"></label></div>'+
-   '<div class="dpw" data-for="f_ap"><span>Apertura de ofertas</span><input type="hidden" id="f_ap"><button type="button" class="dpb" data-act="dp" data-for="f_ap"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="dpt">Elegir fecha</span></button></div>'+
-   '<div class="dpw" data-for="f_en"><span>Fecha de entrega</span><input type="hidden" id="f_en"><button type="button" class="dpb" data-act="dp" data-for="f_en"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="dpt">Elegir fecha</span></button></div>'+
-   '<div class="dpw" data-for="f_tipo"><span>Tipo</span><input type="hidden" id="f_tipo"><button type="button" class="dpb" data-act="dp" data-kind="tipo" data-for="f_tipo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1"/></svg><span class="dpt">Elige el tipo</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg></button></div>'+
-   '<fieldset style="border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend>'+
-     '<label class="chk"><input type="checkbox" name="f_al" value="7">7 días antes</label>'+
-     '<label class="chk"><input type="checkbox" name="f_al" value="3" checked>3 días antes</label>'+
-     '<label class="chk"><input type="checkbox" name="f_al" value="0">El mismo día</label>'+
-     '<label class="chk"><input type="checkbox" id="f_cuson">Personalizado</label>'+
-     '<div style="display:flex;align-items:center;gap:6px;padding-bottom:6px"><input id="f_cus" type="number" min="1" max="90" step="1" placeholder="Ej. 10" disabled aria-label="Días de anticipación personalizados" style="width:90px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg)"><span style="color:var(--muted);font-size:12px">días antes</span></div></fieldset>'+
-   '<div class="dpw" data-for="f_hora"><span>Hora de la alerta</span><input type="hidden" id="f_hora" value="08:00"><button type="button" class="dpb has" data-act="dp" data-kind="time" data-for="f_hora"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="dpt">8:00 AM</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg></button></div>'+
-   '<button class="btn pri" type="submit">Agregar</button>'+
-   '<p class="sub" style="grid-column:1/-1;margin:0">'+(CLOUD&&USER?'Los avisos llegarán a <b>'+esc(USER.email)+'</b>. <button type="button" class="btn sm" data-act="testmail">Enviarme un correo de prueba</button>':'Sin iniciar sesión, los avisos solo se ven dentro de la página.')+'</p></form></div>'+
-  '<div class="card"><div class="tablewrap"><table><thead><tr><th>Procedimiento</th><th>Institución y objeto</th><th>Apertura</th><th>Entrega</th><th>Tipo</th><th>Alerta</th><th>Estado</th><th></th></tr></thead><tbody>'+
+  formHtml(cur)+
+  '<div class="card"><div class="tablewrap"><table><thead><tr><th>Procedimiento</th><th>Institución y objeto</th><th>Apertura</th><th>Entrega</th><th>Tipo</th><th>Avisos</th><th>Estado</th><th></th></tr></thead><tbody>'+
    (rows.length?rows.map(function(it){
-     return '<tr><td><b>'+esc(it.num)+'</b>'+(it.ej?'<div class="m" style="color:var(--muted);font-size:11px">ejemplo</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td>'+tipoTxt(it.tipo)+'</td><td class="num2">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap">'+
+     return '<tr><td><button type="button" class="lnk" data-act="hist" data-id="'+it.id+'" title="Ver historial">'+esc(it.num)+'</button>'+(it.ej?'<div style="color:var(--muted);font-size:11px">ejemplo</div>':'')+(it.editada?'<div style="font-size:11px;color:var(--muted);margin-top:2px"><span class="pill ed">Editada</span> '+fmtDT(it.editada)+'</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td>'+tipoTxt(it.tipo)+'</td><td class="num2" style="font-size:12px">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button> '+
        (it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
    }).join(''):'<tr><td colspan="8" class="empty">No hay licitaciones que coincidan.</td></tr>')+'</tbody></table></div></div>';
 }
@@ -602,7 +637,26 @@ function histEvents(){
   out.sort(function(a,b){return a.fecha<b.fecha?1:a.fecha>b.fecha?-1:0});
   return out;
 }
+function vHistItem(it){
+  var ev=[],da=diff(it.apertura),de=diff(it.entrega);
+  if(it.creada)ev.push({f:it.creada,dt:1,lbl:'Licitación registrada',ic:'list'});
+  ev.push({f:it.apertura,lbl:'Apertura de ofertas',ic:'gavel',pill:da<0?['','Realizada']:[da<=1?'crit':da<=3?'warn':'',when(da)]});
+  if(it.estado==='Entregada')ev.push({f:it.entrega,lbl:'Entrega',ic:'doc',ok:1,pill:['ok','Entregada']});
+  else ev.push({f:it.entrega,lbl:'Entrega',ic:'doc',pill:[de<0?'crit':de<=3?'warn':'',when(de)]});
+  if(it.editada)ev.push({f:it.editada,dt:1,lbl:'Licitación editada',ic:'list'});
+  if(it.entregadaEn)ev.push({f:it.entregadaEn,dt:1,lbl:'Marcada como entregada',ic:'doc',ok:1});
+  ev.sort(function(a,b){return a.f<b.f?-1:a.f>b.f?1:0});
+  return '<div><h1>Historial</h1><p class="sub">Todo lo que ha pasado con esta licitación, en orden de fechas.</p></div>'+
+  '<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0"><h2>'+esc(it.num)+'</h2><div style="margin-top:4px">'+esc(it.inst)+'</div><div style="color:var(--muted)">'+esc(it.obj)+'</div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+statusPill(it)+'<span class="pill">'+tipoTxt(it.tipo)+'</span>'+(it.editada?'<span class="pill ed">Editada · '+fmtDT(it.editada)+'</span>':'')+'</div></div>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start"><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button><button class="btn sm" data-act="gocal" data-d="'+it.entrega+'">Ver en calendario</button><button class="btn sm" data-act="histall">Ver todo el historial</button></div></div>'+
+   '<p class="sub" style="margin:10px 0 0">Avisos · '+alertTxt(it).replace('<br>',' · ')+'</p></div>'+
+  '<div class="card"><h2 style="margin-bottom:6px">Línea de tiempo</h2><div class="list">'+ev.map(function(e){
+    return '<div class="item"><div class="dot" style="'+(e.ok?'background:var(--ok-soft);color:var(--ok)':'')+'">'+ICON[e.ic]+'</div><div><div class="t">'+e.lbl+'</div><div class="m">'+(e.dt?fmtDT(e.f):fmt(e.f))+(e.pill?' <span class="pill '+e.pill[0]+'">'+e.pill[1]+'</span>':'')+'</div></div></div>';
+  }).join('')+'</div></div>';
+}
 function vHistorial(){
+  var one=S.histId?items.filter(function(i){return i.id===S.histId})[0]:null;
+  if(one)return vHistItem(one);
   var all=histEvents();
   var F=[['todo','Todo'],['entrega','Entregas'],['apertura','Aperturas'],['vencida','Vencidas']];
   var n=function(k){return k==='todo'?all.length:all.filter(function(e){return e.k===k}).length};
@@ -663,6 +717,13 @@ function dpDraw(){
   }
   o.innerHTML='<div class="dph"><button type="button" class="btn sm" data-act="dpnav" data-n="-1" aria-label="Mes anterior">‹</button><b>'+MES[DP.m]+' '+DP.y+'</b><button type="button" class="btn sm" data-act="dpnav" data-n="1" aria-label="Mes siguiente">›</button></div><div class="dpg">'+g+'</div><div class="dpf"><button type="button" class="btn sm" data-act="dppick" data-d="'+iso(TODAY)+'">Hoy</button><span class="dpl"><span class="hf" style="display:inline-grid;vertical-align:-2px">'+FLAG+'</span> feriado</span></div>';
 }
+function searchRes(q){q=q.toLowerCase();return items.filter(function(it){return (it.num+' '+it.inst+' '+it.obj).toLowerCase().indexOf(q)>-1})}
+function renderSearch(){
+  var box=document.getElementById('sres');
+  if(!S.q||S.view==='licitaciones'){box.hidden=true;box.innerHTML='';return}
+  var r=searchRes(S.q);box.hidden=false;
+  box.innerHTML=r.length?r.slice(0,6).map(function(it){return '<button type="button" class="sr" data-act="hist" data-id="'+it.id+'"><div class="t">'+esc(it.num)+' '+statusPill(it)+'</div><div class="m">'+esc(it.inst)+' — '+esc(it.obj)+'</div></button>'}).join('')+(r.length>6?'<div class="m" style="padding:8px 12px;color:var(--muted)">y '+(r.length-6)+' más. Escribe más para afinar.</div>':''):'<div class="m" style="padding:12px;color:var(--muted)">No hay licitaciones que coincidan.</div>';
+}
 function render(){
   DP=null;
   document.getElementById('todayLbl').textContent=TODAY.getDate()+'/'+String(TODAY.getMonth()+1).padStart(2,'0')+'/'+TODAY.getFullYear();
@@ -672,30 +733,49 @@ function render(){
   p.innerHTML=({inicio:vInicio,licitaciones:vLic,historial:vHistorial,sicop:vSicop})[S.view]();
   renderBell();
   renderModal();
+  renderSearch();
   var f=document.getElementById('addf');
-  var co=document.getElementById('f_cuson');
-  if(co)co.addEventListener('change',function(){var ci=document.getElementById('f_cus');ci.disabled=!co.checked;if(co.checked)ci.focus()});
+  ['a','e'].forEach(function(k){var co=document.getElementById('f_cuson_'+k);if(co)co.addEventListener('change',function(){var ci=document.getElementById('f_cus_'+k);ci.disabled=!co.checked;if(co.checked)ci.focus()})});
   if(f)f.addEventListener('submit',function(ev){
     ev.preventDefault();
     var g=function(i){return document.getElementById(i).value.trim()};
     if(!g('f_ap')||!g('f_en')){toast('Elige la fecha de apertura y la de entrega');return}
     if(!g('f_tipo')){toast('Elige el tipo de licitación');return}
-    var al=Array.prototype.slice.call(f.querySelectorAll('input[name="f_al"]:checked')).map(function(c){return +c.value});
-    if(document.getElementById('f_cuson').checked){
-      var cv=parseInt(document.getElementById('f_cus').value,10);
-      if(!(cv>=1&&cv<=90)){toast('Escribe los días personalizados, de 1 a 90');return}
-      if(al.indexOf(cv)<0)al.push(cv);
+    var grp=function(k){
+      var al=Array.prototype.slice.call(f.querySelectorAll('input[name="f_al_'+k+'"]:checked')).map(function(c){return +c.value});
+      if(document.getElementById('f_cuson_'+k).checked){
+        var cv=parseInt(document.getElementById('f_cus_'+k).value,10);
+        if(!(cv>=1&&cv<=90))return null;
+        if(al.indexOf(cv)<0)al.push(cv);
+      }
+      return al;
+    };
+    var alA=grp('a'),alE=grp('e');
+    if(alA===null||alE===null){toast('Escribe los días personalizados, de 1 a 90');return}
+    var nueva={num:g('f_num'),inst:g('f_inst'),obj:g('f_obj'),tipo:g('f_tipo'),apertura:g('f_ap'),entrega:g('f_en'),alA:alA,horaA:g('f_hora_a')||'08:00',alE:alE,horaE:g('f_hora_e')||'08:00'};
+    var ahora=new Date().toISOString();
+    if(S.edit){
+      var eid=S.edit,aplicar=function(){
+        items.forEach(function(i){if(i.id===eid){Object.assign(i,nueva);i.editada=ahora}});
+        S.edit=null;save();render();toast('Cambios guardados');
+      };
+      if(CLOUD){
+        var up=toRow(nueva);up.editada_en=ahora;
+        sb.from('licitaciones').update(up).eq('id',eid).then(function(r){
+          if(r.error){toast(r.error.code==='23505'?'Ya tienes una licitación con ese número':'No se pudo guardar. Intenta de nuevo.');return}
+          aplicar();
+        });
+      }else aplicar();
+      return;
     }
-    if(!al.length){toast('Elige cuándo quieres la alerta');return}
-    var nueva={num:g('f_num'),inst:g('f_inst'),obj:g('f_obj'),tipo:g('f_tipo'),apertura:g('f_ap'),entrega:g('f_en'),al:al,hora:g('f_hora')||'08:00'};
     if(CLOUD){
-      sb.from('licitaciones').insert(nueva).select().single().then(function(r){
+      sb.from('licitaciones').insert(toRow(nueva)).select().single().then(function(r){
         if(r.error){toast(r.error.code==='23505'?'Ya tienes una licitación con ese número':'No se pudo guardar. Intenta de nuevo.');return}
         items.push(fromRow(r.data));render();toast('Licitación agregada');
       });
       return;
     }
-    nueva.id='u'+Date.now();nueva.estado='Activa';
+    nueva.id='u'+Date.now();nueva.estado='Activa';nueva.creada=ahora;
     items.push(nueva);
     save();render();toast('Licitación agregada');
   });
@@ -730,6 +810,7 @@ function sync(){
 document.addEventListener('click',function(ev){
   if(ev.target.classList&&ev.target.classList.contains('ov')){S.kpi=null;renderModal();return}
   var b=ev.target.closest('[data-act]');
+  if(!ev.target.closest('.search')){var sr=document.getElementById('sres');if(sr)sr.hidden=true}
   if(!ev.target.closest('#bellPanel')&&!ev.target.closest('#bell')&&S.bell){S.bell=false;renderBell()}
   if(DP&&!ev.target.closest('.dpw'))dpClose();
   if(S.pick&&!ev.target.closest('.pickwrap')){S.pick=false;if(!b)render()}
@@ -753,15 +834,20 @@ document.addEventListener('click',function(ev){
   if(a==='closekpi'){S.kpi=null;renderModal();return}
   if(a==='bellopen'){S.bell=true;render();window.scrollTo(0,0);return}
   if(a==='afilter'){S.af=b.dataset.f;render();return}
+  if(a==='wday'){S.wsel=b.dataset.d;render();return}
+  if(a==='hist'){goHist(b.dataset.id);return}
+  if(a==='histall'){S.histId=null;render();window.scrollTo(0,0);return}
+  if(a==='edit'){S.edit=b.dataset.id;S.kpi=null;S.view='licitaciones';S.q='';document.getElementById('q').value='';render();var fc=document.getElementById('formcard');if(fc)fc.scrollIntoView({block:'start'});return}
+  if(a==='canceledit'){S.edit=null;render();return}
   if(a==='gocal'){var gd=parse(b.dataset.d);S.kpi=null;S.view='inicio';S.sel=b.dataset.d;S.cur=new Date(gd.getFullYear(),gd.getMonth(),1);render();var mm=document.querySelector('.month');if(mm)mm.scrollIntoView({block:'center'});return}
-  if(a==='nav'){S.view=b.dataset.v;S.bell=false;render();window.scrollTo(0,0)}
+  if(a==='nav'){S.view=b.dataset.v;S.bell=false;S.q='';S.histId=null;S.edit=null;document.getElementById('q').value='';render();window.scrollTo(0,0)}
   else if(a==='day'){S.sel=b.dataset.d;var d=parse(S.sel);S.cur=new Date(d.getFullYear(),d.getMonth(),1);render()}
   else if(a==='prev'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()-1,1);render()}
   else if(a==='next'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()+1,1);render()}
   else if(a==='today'){S.cur=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);S.sel=iso(TODAY);render()}
   else if(a==='done'){
-    var idd=b.dataset.id,marcar=function(){items.forEach(function(i){if(i.id===idd)i.estado='Entregada'});save();render();toast('Marcada como entregada')};
-    if(CLOUD)sb.from('licitaciones').update({estado:'Entregada'}).eq('id',idd).then(function(r){if(r.error){toast('No se pudo guardar. Intenta de nuevo.');return}marcar()});
+    var idd=b.dataset.id,ent=new Date().toISOString(),marcar=function(){items.forEach(function(i){if(i.id===idd){i.estado='Entregada';i.entregadaEn=ent}});save();render();toast('Marcada como entregada')};
+    if(CLOUD)sb.from('licitaciones').update({estado:'Entregada',entregada_en:ent}).eq('id',idd).then(function(r){if(r.error){toast('No se pudo guardar. Intenta de nuevo.');return}marcar()});
     else marcar();
   }
   else if(a==='del'){
@@ -783,12 +869,24 @@ document.addEventListener('change',function(ev){
   if(c.checked&&i<0)cfg.th.push(n);if(!c.checked&&i>-1)cfg.th.splice(i,1);
   save();render();
 });
-document.getElementById('q').addEventListener('input',function(e){S.q=e.target.value;if(S.view!=='inicio'&&S.view!=='licitaciones')S.view='inicio';render();var q=document.getElementById('q');q.focus()});
+document.getElementById('q').addEventListener('input',function(e){
+  S.q=e.target.value;
+  if(S.view==='licitaciones'){render();document.getElementById('q').focus()}else renderSearch();
+});
+document.getElementById('q').addEventListener('focus',function(){renderSearch()});
+document.getElementById('q').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&S.view!=='licitaciones'&&S.q){e.preventDefault();var r=searchRes(S.q);if(r.length)goHist(r[0].id)}
+  if(e.key==='Escape'){document.getElementById('sres').hidden=true}
+});
 document.addEventListener('input',function(ev){
   var t=ev.target;if(!DP||DP.kind!=='time'||(t.id!=='t_h'&&t.id!=='t_m'))return;
   var v=parseInt(t.value,10);
   if(t.id==='t_h'&&v>=1&&v<=12)DP.h=v;else if(t.id==='t_m'&&v>=0&&v<=59)DP.mi=v;else return;
   tapply();
+});
+document.addEventListener('keydown',function(ev){
+  var wd=ev.target;
+  if((ev.key==='Enter'||ev.key===' ')&&wd.classList&&wd.classList.contains('wd')){ev.preventDefault();wd.click()}
 });
 document.addEventListener('keydown',function(ev){
   var t=ev.target;

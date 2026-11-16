@@ -91,16 +91,17 @@ async function procesar() {
   for (const l of lics) {
     const to = correo.get(l.user_id);
     if (!to) continue;
-    const [hh, mm] = String(l.hora).split(":").map(Number);
-    const horaMin = hh * 60 + mm;
-    const avisos: number[] = l.al?.length ? l.al : [3];
-
     for (const tipo of ["apertura", "entrega"] as const) {
+      // Cada fecha tiene sus propios días de aviso y su propia hora.
+      const avisos: number[] = l[tipo === "apertura" ? "al_apertura" : "al_entrega"] ?? [];
+      const [hh, mm] = String(l[tipo === "apertura" ? "hora_apertura" : "hora_entrega"] ?? "08:00").split(":").map(Number);
+      const horaMin = hh * 60 + mm;
       const d = dias(hoy, l[tipo]);
       const nombre = tipo === "apertura" ? "Apertura de ofertas" : "Entrega";
       try {
         if (d >= 0) {
           // Avisos que ya les toca: faltan menos días que n, o es el día exacto y ya pasó la hora.
+          if (!avisos.length) continue;
           const toca = avisos.filter((n) => d < n || (d === n && min >= horaMin));
           if (!toca.length) continue;
           const m = Math.min(...toca);
