@@ -29,9 +29,10 @@ create trigger al_crear_usuario after insert on auth.users
 create or replace function public.solo_outlook() returns trigger
 language plpgsql as $$
 begin
-  if lower(split_part(coalesce(new.email, ''), '@', 2)) not in ('outlook.com', 'hotmail.com', 'live.com') then
-    raise exception 'Solo se permiten cuentas de Outlook (outlook.com, hotmail.com, live.com)';
-  end if;
+  -- MODO PRUEBAS: se permite cualquier correo. Para limitar, descomenta:
+  -- if lower(split_part(coalesce(new.email, ''), '@', 2)) not in ('outlook.com', 'hotmail.com', 'live.com') then
+  --   raise exception 'Solo se permiten cuentas de Outlook (outlook.com, hotmail.com, live.com)';
+  -- end if;
   return new;
 end $$;
 

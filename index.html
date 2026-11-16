@@ -314,22 +314,23 @@ function dbLoad(){
     items=r.data.map(fromRow);
   });
 }
-var OK_DOM=['gmail.com','outlook.com','hotmail.com','live.com'];
+var OK_DOM=[]; // vacío = cualquier correo (modo pruebas). Para limitar: ['outlook.com','hotmail.com','live.com']
 function okMail(e) {
   var m = /^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(e);
-  return !!m && OK_DOM.indexOf(m[1].toLowerCase()) > -1;
+  return !!m && (!OK_DOM.length || OK_DOM.indexOf(m[1].toLowerCase()) > -1);
+}
 function showLogin(msg,info,email){
   document.querySelector('.app').hidden=true;
   var l=document.getElementById('login');l.hidden=false;
-  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>Inicia sesión</h1><p class="sub">Escribe tu correo de Outlook y te enviamos un enlace para entrar. Ese mismo correo recibirá tus avisos.</p>'+
-    (sb?'<form id="lform" style="display:flex;flex-direction:column;gap:10px"><label class="fl">Correo de Outlook<input id="l_email" type="email" required autocomplete="email" placeholder="nombre@outlook.com" value="'+esc(email||'')+'"></label><button type="submit" class="btn pri lgbtn">Enviarme el enlace de acceso</button></form><p class="sub" style="margin:0;font-size:12px">Solo cuentas '+OK_DOM.map(function(d){return '@'+d}).join(', ')+'.</p>':'')+
+  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>Inicia sesión</h1><p class="sub">Escribe tu correo y te enviamos un enlace para entrar. Ese mismo correo recibirá tus avisos.</p>'+
+    (sb?'<form id="lform" style="display:flex;flex-direction:column;gap:10px"><label class="fl">Correo<input id="l_email" type="email" required autocomplete="email" placeholder="nombre@correo.com" value="'+esc(email||'')+'"></label><button type="submit" class="btn pri lgbtn">Enviarme el enlace de acceso</button></form><p class="sub" style="margin:0;font-size:12px">'+(OK_DOM.length?'Solo cuentas '+OK_DOM.map(function(d){return '@'+d}).join(', ')+'.':'')+'</p>':'')+
     (info?'<p class="sub" style="margin:0;color:var(--ok)">'+esc(info)+'</p>':'')+
     '<p class="lgerr">'+esc(msg||'')+'</p></div></div>';
   var lf=document.getElementById('lform');
   if(lf)lf.addEventListener('submit',function(ev){
     ev.preventDefault();
     var em=document.getElementById('l_email').value.trim().toLowerCase();
-    if(!okMail(em)){showLogin('Usa un correo de Outlook ('+OK_DOM.map(function(d){return '@'+d}).join(', ')+').',null,em);return}
+    if(!okMail(em)){showLogin('Escribe un correo válido.',null,em);return}
     lf.querySelector('button').disabled=true;
     sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r){
       if(r.error)showLogin('No se pudo enviar el enlace. Intenta de nuevo en unos minutos.',null,em);
