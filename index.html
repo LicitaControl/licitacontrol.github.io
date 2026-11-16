@@ -314,7 +314,7 @@ function dbLoad(){
     items=r.data.map(fromRow);
   });
 }
-var OK_DOM=['outlook.com','hotmail.com','live.com'];
+var OK_DOM=['gmail.com','outlook.com','hotmail.com','live.com'];
 function okMail(e){var m=/^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(e);return !!m&&OK_DOM.indexOf(m[1].toLowerCase())>-1}
 function showLogin(msg,info,email){
   document.querySelector('.app').hidden=true;
