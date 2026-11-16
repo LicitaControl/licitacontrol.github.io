@@ -361,7 +361,7 @@ function showLogin(msg,info,email){
     if(!okMail(em)){showLogin('Escribe un correo válido.',null,em);return}
     lf.querySelector('button').disabled=true;
     sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r){
-      if(r.error)showLogin('No se pudo enviar el enlace. Intenta de nuevo en unos minutos.',null,em);
+      if(r.error){console.error(r.error);var rm=String(r.error.message||'');var why=/rate|seconds|too many/i.test(rm)?'Pediste muchos enlaces seguidos. Espera un minuto e intenta de nuevo.':/database error|not allowed|domain/i.test(rm)?'Este correo no está permitido todavía.':'No se pudo enviar el enlace.';showLogin(why+' (Detalle: '+rm+')',null,em)}
       else showLogin('','Listo. Te enviamos un enlace a '+em+'. Ábrelo en este mismo navegador. Si no lo ves, revisa el correo no deseado.',em);
     });
   });
