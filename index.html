@@ -347,27 +347,72 @@ function okMail(e) {
   var m = /^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(e);
   return !!m && (!OK_DOM.length || OK_DOM.indexOf(m[1].toLowerCase()) > -1);
 }
-function showLogin(msg,info,email){
+var LM='in', RECOV=/type=recovery/.test(location.hash);
+function errAuth(e){var m=String((e&&e.message)||'');
+  if(/not confirmed/i.test(m))return 'Falta confirmar tu correo. Revisa tu bandeja (y spam).';
+  if(/rate|seconds|too many/i.test(m))return 'Demasiados intentos. Espera un minuto e intenta de nuevo.';
+  if(/already|registered|exists/i.test(m))return 'Ese correo ya tiene una cuenta. Prueba entrar o usa "Olvidé mi contraseña".';
+  if(/password/i.test(m)&&/6|8|short|weak/i.test(m))return 'La contraseña es muy corta o débil. Usa al menos 8 caracteres.';
+  return 'No se pudo completar. ('+m+')'}
+function showLogin(msg,info,pref){
   document.querySelector('.app').hidden=true;
+  if(RECOV)LM='reset';
   var l=document.getElementById('login');l.hidden=false;
-  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>Inicia sesión</h1><p class="sub">Escribe tu correo y te enviamos un enlace para entrar. Ese mismo correo recibirá tus avisos.</p>'+
-    (sb?'<form id="lform" style="display:flex;flex-direction:column;gap:10px"><label class="fl">Correo<input id="l_email" type="email" required autocomplete="email" placeholder="nombre@correo.com" value="'+esc(email||'')+'"></label><button type="submit" class="btn pri lgbtn">Enviarme el enlace de acceso</button></form><p class="sub" style="margin:0;font-size:12px">'+(OK_DOM.length?'Solo cuentas '+OK_DOM.map(function(d){return '@'+d}).join(', ')+'.':'')+'</p>':'')+
+  var T={in:['Inicia sesión','Entra con tu usuario y contraseña.'],up:['Crear cuenta','Elige un usuario y una contraseña. Tu correo recibirá los avisos de tus licitaciones.'],forgot:['Recuperar contraseña','Escribe tu correo y te enviamos un enlace para elegir una contraseña nueva.'],reset:['Nueva contraseña','Elige tu contraseña nueva.']}[LM];
+  var fld=function(id,lb,ty,ac,ph,val,extra){return '<label class="fl">'+lb+'<input id="'+id+'" type="'+ty+'" required autocomplete="'+ac+'" placeholder="'+ph+'" value="'+esc(val||'')+'"'+(extra||'')+'></label>'};
+  var F={
+   in:fld('l_user','Usuario o correo','text','username','tu usuario',pref)+fld('l_pass','Contraseña','password','current-password','••••••••')+'<button type="submit" class="btn pri lgbtn">Entrar</button>',
+   up:fld('l_user','Usuario','text','username','ej. maria.lopez','',' pattern="[A-Za-z0-9._\\-]{3,20}" title="De 3 a 20 letras, números, punto, guion o guion bajo"')+fld('l_email','Correo','email','email','nombre@correo.com',pref)+fld('l_pass','Contraseña (mínimo 8)','password','new-password','••••••••','',' minlength="8"')+'<button type="submit" class="btn pri lgbtn">Crear cuenta</button>',
+   forgot:fld('l_email','Correo','email','email','nombre@correo.com',pref)+'<button type="submit" class="btn pri lgbtn">Enviarme el enlace</button>',
+   reset:fld('l_pass','Contraseña nueva (mínimo 8)','password','new-password','••••••••','',' minlength="8"')+'<button type="submit" class="btn pri lgbtn">Guardar contraseña</button>'}[LM];
+  var links=LM==='in'?'<button type="button" class="btn sm" data-lm="up">Crear cuenta</button> <button type="button" class="btn sm" data-lm="forgot">Olvidé mi contraseña</button>':(LM==='reset'?'':'<button type="button" class="btn sm" data-lm="in">Volver a entrar</button>');
+  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>'+T[0]+'</h1><p class="sub">'+T[1]+'</p>'+
+    (sb?'<form id="lform" style="display:flex;flex-direction:column;gap:10px">'+F+'</form><div style="display:flex;gap:8px;flex-wrap:wrap">'+links+'</div>':'')+
     (info?'<p class="sub" style="margin:0;color:var(--ok)">'+esc(info)+'</p>':'')+
     '<p class="lgerr">'+esc(msg||'')+'</p></div></div>';
+  Array.prototype.forEach.call(l.querySelectorAll('[data-lm]'),function(x){x.addEventListener('click',function(){LM=x.dataset.lm;showLogin()})});
   var lf=document.getElementById('lform');
-  if(lf)lf.addEventListener('submit',function(ev){
+  if(!lf)return;
+  var val=function(id){var e=document.getElementById(id);return e?e.value.trim():''};
+  lf.addEventListener('submit',function(ev){
     ev.preventDefault();
-    var em=document.getElementById('l_email').value.trim().toLowerCase();
-    if(!okMail(em)){showLogin('Escribe un correo válido.',null,em);return}
-    lf.querySelector('button').disabled=true;
-    sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r){
-      if(r.error){console.error(r.error);var rm=String(r.error.message||'');var why=/rate|seconds|too many/i.test(rm)?'Pediste muchos enlaces seguidos. Espera un minuto e intenta de nuevo.':/database error|not allowed|domain/i.test(rm)?'Este correo no está permitido todavía.':'No se pudo enviar el enlace.';showLogin(why+' (Detalle: '+rm+')',null,em)}
-      else showLogin('','Listo. Te enviamos un enlace a '+em+'. Ábrelo en este mismo navegador. Si no lo ves, revisa el correo no deseado.',em);
-    });
+    var btn=lf.querySelector('button');
+    var fail=function(m){showLogin(m,null,val('l_user')||val('l_email'))};
+    if(LM==='in'){
+      var u=val('l_user').toLowerCase(),pw=document.getElementById('l_pass').value;
+      btn.disabled=true;
+      var go=function(email){sb.auth.signInWithPassword({email:email,password:pw}).then(function(r){
+        if(r.error)fail(/not confirmed/i.test(r.error.message||'')?errAuth(r.error):'Usuario o contraseña incorrectos.')})};
+      if(u.indexOf('@')>-1)go(u);
+      else sb.rpc('email_por_usuario',{u:u}).then(function(r){if(r.error||!r.data)fail('Usuario o contraseña incorrectos.');else go(r.data)});
+    }else if(LM==='up'){
+      var us=val('l_user').toLowerCase(),em=val('l_email').toLowerCase(),pw2=document.getElementById('l_pass').value;
+      if(!okMail(em)){fail('Escribe un correo válido.');return}
+      btn.disabled=true;
+      sb.rpc('email_por_usuario',{u:us}).then(function(r){
+        if(r.data){fail('Ese usuario ya existe. Elige otro.');return}
+        sb.auth.signUp({email:em,password:pw2,options:{data:{usuario:us},emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
+          if(r2.error){fail(errAuth(r2.error));return}
+          if(!(r2.data&&r2.data.session)){LM='in';showLogin('','Cuenta creada. Te enviamos un correo para confirmarla; después entra con tu usuario y contraseña.',us)}
+        })});
+    }else if(LM==='forgot'){
+      var fe=val('l_email').toLowerCase();
+      if(!okMail(fe)){fail('Escribe un correo válido.');return}
+      btn.disabled=true;
+      sb.auth.resetPasswordForEmail(fe,{redirectTo:location.origin+location.pathname}).then(function(r){
+        if(r.error)fail(errAuth(r.error));else{LM='in';showLogin('','Si ese correo tiene cuenta, te enviamos un enlace para cambiar la contraseña. Revisa también spam.')}});
+    }else if(LM==='reset'){
+      var np=document.getElementById('l_pass').value;btn.disabled=true;
+      sb.auth.updateUser({password:np}).then(function(r){
+        if(r.error){fail(errAuth(r.error));return}
+        RECOV=false;LM='in';try{history.replaceState(null,'',location.pathname)}catch(e){}
+        sb.auth.getSession().then(function(g){enterApp(g.data&&g.data.session)})});
+    }
   });
 }
 function enterApp(session){
-  if(!session){USER=null;items=[];ROL='usuario';showLogin();return}
+  if(!session){USER=null;items=[];ROL='usuario';if(!RECOV)LM='in';showLogin();return}
+  LM='in';
   USER=session.user;
   document.getElementById('login').hidden=true;
   document.querySelector('.app').hidden=false;
@@ -950,7 +995,7 @@ document.addEventListener('click',function(ev){
     if(CLOUD)sb.from('licitaciones').delete().eq('id',idq).then(function(r){if(r.error){toast('No se pudo quitar. Intenta de nuevo.');return}quitar()});
     else quitar();
   }
-  else if(a==='logout'){sb.auth.signOut().then(function(){USER=null;items=[];ROL='usuario';showLogin()})}
+  else if(a==='logout'){sb.auth.signOut().then(function(){USER=null;items=[];ROL='usuario';LM='in';showLogin()})}
   else if(a==='testmail'){b.disabled=true;sb.functions.invoke('send-alerts',{body:{test:true}}).then(function(r){b.disabled=false;toast(r.error?'No se pudo enviar la prueba. Revisa la configuración del correo.':'Listo. Revisa tu bandeja de entrada y el correo no deseado.')})}
   else if(a==='dismiss'){S.dismissed=true;render()}
   else if(a==='etab'){S.etab=b.dataset.v;S.cm=null;render()}
@@ -1015,6 +1060,8 @@ if(CLOUD){
   if(!sb){showLogin('No se pudo cargar el servicio de inicio de sesión. Revisa tu conexión y recarga la página.')}
   else{
     sb.auth.onAuthStateChange(function(ev,session){
+      if(ev==='PASSWORD_RECOVERY'){RECOV=true;USER=null;LM='reset';showLogin();return}
+      if(RECOV&&(ev==='SIGNED_IN'||ev==='INITIAL_SESSION')){showLogin();return}
       if(ev==='SIGNED_IN'&&USER&&session&&session.user.id===USER.id)return;
       if(ev!=='INITIAL_SESSION'&&ev!=='SIGNED_IN'&&ev!=='SIGNED_OUT')return;
       setTimeout(function(){enterApp(session)},0);
