@@ -6,8 +6,8 @@ select cron.schedule(
   '*/15 * * * *',
   $$
   select net.http_post(
-    url := 'https://TU-PROYECTO.supabase.co/functions/v1/send-alerts',
-    headers := '{"Content-Type": "application/json", "x-cron-secret": "TU-CLAVE"}'::jsonb,
+    url := 'https://kxv17.github.io/LicitaControl//functions/v1/send-alerts',
+    headers := '{"Content-Type": "application/json", "x-cron-secret": "12389738918987549153jsfbmnbfbuv78t32415"}'::jsonb,
     body := '{}'::jsonb
   );
   $$
