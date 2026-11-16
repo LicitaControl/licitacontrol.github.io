@@ -314,12 +314,26 @@ function dbLoad(){
     items=r.data.map(fromRow);
   });
 }
-function showLogin(msg){
+var OK_DOM=['outlook.com','hotmail.com','live.com'];
+function okMail(e){var m=/^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(e);return !!m&&OK_DOM.indexOf(m[1].toLowerCase())>-1}
+function showLogin(msg,info,email){
   document.querySelector('.app').hidden=true;
   var l=document.getElementById('login');l.hidden=false;
-  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>Inicia sesión</h1><p class="sub">Entra con tu cuenta de Outlook para ver tus licitaciones y recibir los avisos en tu correo.</p>'+
-    (sb?'<button type="button" class="btn pri lgbtn" data-act="login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Iniciar sesión con Outlook</button>':'')+
+  l.innerHTML='<div class="lgn"><div class="lgc"><div class="brand lgb">LICITA<small>CONTROL</small></div><h1>Inicia sesión</h1><p class="sub">Escribe tu correo de Outlook y te enviamos un enlace para entrar. Ese mismo correo recibirá tus avisos.</p>'+
+    (sb?'<form id="lform" style="display:flex;flex-direction:column;gap:10px"><label class="fl">Correo de Outlook<input id="l_email" type="email" required autocomplete="email" placeholder="nombre@outlook.com" value="'+esc(email||'')+'"></label><button type="submit" class="btn pri lgbtn">Enviarme el enlace de acceso</button></form><p class="sub" style="margin:0;font-size:12px">Solo cuentas '+OK_DOM.map(function(d){return '@'+d}).join(', ')+'.</p>':'')+
+    (info?'<p class="sub" style="margin:0;color:var(--ok)">'+esc(info)+'</p>':'')+
     '<p class="lgerr">'+esc(msg||'')+'</p></div></div>';
+  var lf=document.getElementById('lform');
+  if(lf)lf.addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var em=document.getElementById('l_email').value.trim().toLowerCase();
+    if(!okMail(em)){showLogin('Usa un correo de Outlook ('+OK_DOM.map(function(d){return '@'+d}).join(', ')+').',null,em);return}
+    lf.querySelector('button').disabled=true;
+    sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r){
+      if(r.error)showLogin('No se pudo enviar el enlace. Intenta de nuevo en unos minutos.',null,em);
+      else showLogin('','Listo. Te enviamos un enlace a '+em+'. Ábrelo en este mismo navegador. Si no lo ves, revisa el correo no deseado.',em);
+    });
+  });
 }
 function enterApp(session){
   if(!session){USER=null;items=[];showLogin();return}
@@ -850,7 +864,6 @@ document.addEventListener('click',function(ev){
     if(CLOUD)sb.from('licitaciones').delete().eq('id',idq).then(function(r){if(r.error){toast('No se pudo quitar. Intenta de nuevo.');return}quitar()});
     else quitar();
   }
-  else if(a==='login'){sb.auth.signInWithOAuth({provider:'azure',options:{scopes:'email',redirectTo:location.origin+location.pathname}}).then(function(r){if(r.error)showLogin('No se pudo iniciar sesión. Intenta de nuevo.')})}
   else if(a==='logout'){sb.auth.signOut().then(function(){USER=null;items=[];showLogin()})}
   else if(a==='testmail'){b.disabled=true;sb.functions.invoke('send-alerts',{body:{test:true}}).then(function(r){b.disabled=false;toast(r.error?'No se pudo enviar la prueba. Revisa la configuración del correo.':'Listo. Revisa tu bandeja de entrada y el correo no deseado.')})}
   else if(a==='dismiss'){S.dismissed=true;render()}

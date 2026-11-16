@@ -22,6 +22,21 @@ drop trigger if exists al_crear_usuario on auth.users;
 create trigger al_crear_usuario after insert on auth.users
   for each row execute function public.crear_perfil();
 
+-- Solo se pueden registrar cuentas de Outlook. Para agregar dominios, edita esta lista
+-- y la lista OK_DOM de index.html.
+create or replace function public.solo_outlook() returns trigger
+language plpgsql as $$
+begin
+  if lower(split_part(coalesce(new.email, ''), '@', 2)) not in ('outlook.com', 'hotmail.com', 'live.com') then
+    raise exception 'Solo se permiten cuentas de Outlook (outlook.com, hotmail.com, live.com)';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists antes_de_crear_usuario on auth.users;
+create trigger antes_de_crear_usuario before insert on auth.users
+  for each row execute function public.solo_outlook();
+
 -- Licitaciones: cada persona ve y edita solo las suyas
 create table if not exists public.licitaciones (
   id uuid primary key default gen_random_uuid(),

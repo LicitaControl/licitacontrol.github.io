@@ -1,6 +1,6 @@
 # Configurar inicio de sesión con Outlook y avisos por correo
 
-Todo es gratis para empezar. Necesitas cuatro cosas: un proyecto de Supabase, una app registrada en Microsoft, un servicio de correo y pegar dos datos en `index.html`.
+Todo es gratis para empezar. Necesitas tres cosas: un proyecto de Supabase, un servicio de correo y pegar dos datos en `index.html`.
 
 ## 1. Crear el proyecto en Supabase
 1. Entra a supabase.com y crea una cuenta.
@@ -10,16 +10,12 @@ Todo es gratis para empezar. Necesitas cuatro cosas: un proyecto de Supabase, un
    - **anon public key**. Esta clave es pública y puede ir en la página. Nunca copies la `service_role`.
 4. Ve a **SQL Editor**, pega todo el archivo `supabase/schema.sql` y toca **Run**.
 
-## 2. Registrar la app en Microsoft (para el botón "Iniciar sesión con Outlook")
-1. Entra a portal.azure.com con tu cuenta Outlook y abre **Microsoft Entra ID → App registrations → New registration**.
-2. Nombre: `LicitaControl`. En **Supported account types** elige la opción que incluye **cuentas personales de Microsoft**.
-3. En **Redirect URI** elige **Web** y pega `https://TU-PROYECTO.supabase.co/auth/v1/callback`.
-4. Toca **Register** y copia el **Application (client) ID**.
-5. Ve a **Certificates & secrets → New client secret**, créalo y copia el **Value** enseguida (después ya no se ve).
-6. En Supabase ve a **Authentication → Providers → Azure**, actívalo y pega:
-   - Client ID y Client Secret.
-   - **Azure Tenant URL**: `https://login.microsoftonline.com/consumers` (solo cuentas personales).
-7. En **Authentication → URL Configuration** pon como **Site URL** `https://kxv17.github.io/LicitaControl/` y agrégala también en **Redirect URLs**.
+## 2. Inicio de sesión con correo de Outlook (sin Azure)
+La persona escribe su correo de Outlook, recibe un enlace y entra. Así queda comprobado que el correo es suyo, y ahí mismo llegan los avisos.
+1. En Supabase ve a **Authentication → Providers** y deja activado **Email**.
+2. En **Authentication → URL Configuration** pon como **Site URL** `https://kxv17.github.io/LicitaControl/` y agrégala también en **Redirect URLs**.
+3. Para que los enlaces lleguen sin límite, usa tu cuenta de Brevo (paso 3). En **Authentication → Emails → SMTP Settings** activa **Custom SMTP** y pon: host `smtp-relay.brevo.com`, puerto `587`, el usuario y la clave SMTP de Brevo (en Brevo: **SMTP & API → SMTP**) y como remitente el correo verificado. Sin esto, Supabase envía muy pocos correos por hora.
+4. Solo se aceptan `@outlook.com`, `@hotmail.com` y `@live.com`. La regla está en `supabase/schema.sql` (la base de datos la hace cumplir) y en la lista `OK_DOM` de `index.html`. Si necesitas otro dominio, agrégalo en los dos lugares.
 
 ## 3. Servicio de correo
 Elige uno:
@@ -50,7 +46,7 @@ En `index.html` busca esta línea y pega tus dos datos:
 var SB_URL='', SB_KEY='';
 ```
 
-Sube el cambio a GitHub. Al abrir la página aparece el botón **Iniciar sesión con Outlook**. Ya dentro, en **Licitaciones** hay un botón **Enviarme un correo de prueba** para confirmar que todo llega.
+Sube el cambio a GitHub. Al abrir la página pide tu correo de Outlook y te envía el enlace para entrar. Ya dentro, en **Licitaciones** hay un botón **Enviarme un correo de prueba** para confirmar que todo llega.
 
 ## Cómo funcionan los avisos
 - Cada persona ve solo sus licitaciones.
