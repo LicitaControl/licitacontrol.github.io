@@ -315,7 +315,9 @@ function dbLoad(){
   });
 }
 var OK_DOM=['gmail.com','outlook.com','hotmail.com','live.com'];
-function okMail(e){var m=/^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(e);return !!m&&OK_DOM.indexOf(m[1].toLowerCase())>-1}
+function okMail(e) {
+  var m = /^[^\s@]+@([^\s@]+\.[^\s@]+)$/.exec(e);
+  return !!m && OK_DOM.indexOf(m[1].toLowerCase()) > -1;
 function showLogin(msg,info,email){
   document.querySelector('.app').hidden=true;
   var l=document.getElementById('login');l.hidden=false;
