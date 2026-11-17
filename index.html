@@ -322,7 +322,7 @@ var JD={perfiles:[],lics:[],prios:[],coms:[]};
 if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
 var items=CLOUD?[]:(store.get('items',null)||sample());
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
-var S={view:'inicio',wsel:iso(TODAY),histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false,etab:'resumen',euser:'',cm:null,wopen:true};
+var S={view:'inicio',wsel:null,histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false,etab:'resumen',euser:'',cm:null,wopen:true};
 function save(){if(!CLOUD)store.set('items',items);store.set('cfg',cfg)}
 function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en}}
 function toRow(it){return {num:it.num,inst:it.inst,obj:it.obj,tipo:it.tipo,apertura:it.apertura,entrega:it.entrega,al_apertura:it.alA,hora_apertura:it.horaA,al_entrega:it.alE,hora_entrega:it.horaE}}
@@ -593,7 +593,7 @@ function weekHtml(){
 }
 function weekCard(){
   var ws=weekStart(TODAY),we=addDays(ws,6);
-  return '<div class="card"><button type="button" class="wtog" data-act="wtoggle" aria-expanded="'+(S.wopen?'true':'false')+'"><h2 style="margin:0">Esta semana <span style="color:var(--muted);font-weight:400;font-size:13px">· '+ws.getDate()+' al '+we.getDate()+' de '+MES[we.getMonth()]+'</span></h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s;transform:rotate('+(S.wopen?'180':'0')+'deg)"><path d="M6 9l6 6 6-6"/></svg></button>'+(S.wopen?'<div style="margin-top:10px">'+weekHtml()+dayPanel(S.wsel)+'</div>':'')+'</div>';
+  return '<div class="card"><h2 style="margin-bottom:10px">Esta semana <span style="color:var(--muted);font-weight:400;font-size:13px">· '+ws.getDate()+' al '+we.getDate()+' de '+MES[we.getMonth()]+'</span></h2>'+weekHtml()+(S.wsel?dayPanel(S.wsel):'')+'</div>';
 }
 function monthHtml(){
   var y=S.cur.getFullYear(),m=S.cur.getMonth();
@@ -968,7 +968,7 @@ document.addEventListener('click',function(ev){
   if(a==='closekpi'){S.kpi=null;renderModal();return}
   if(a==='bellopen'){S.bell=true;render();window.scrollTo(0,0);return}
   if(a==='afilter'){S.af=b.dataset.f;render();return}
-  if(a==='wday'){S.wsel=b.dataset.d;render();return}
+  if(a==='wday'){S.wsel=(S.wsel===b.dataset.d)?null:b.dataset.d;render();return}
   if(a==='hist'){goHist(b.dataset.id);return}
   if(a==='histall'){S.histId=null;render();window.scrollTo(0,0);return}
   if(a==='edit'){S.edit=b.dataset.id;S.kpi=null;S.view='licitaciones';S.q='';document.getElementById('q').value='';render();var fc=document.getElementById('formcard');if(fc)fc.scrollIntoView({block:'start'});return}
@@ -992,7 +992,6 @@ document.addEventListener('click',function(ev){
   else if(a==='logout'){sb.auth.signOut().then(function(){USER=null;items=[];ROL='usuario';LM='in';showLogin()})}
   else if(a==='testmail'){b.disabled=true;sb.functions.invoke('send-alerts',{body:{test:true}}).then(function(r){b.disabled=false;toast(r.error?'No se pudo enviar la prueba. Revisa la configuración del correo.':'Listo. Revisa tu bandeja de entrada y el correo no deseado.')})}
   else if(a==='dismiss'){S.dismissed=true;render()}
-  else if(a==='wtoggle'){S.wopen=!S.wopen;render()}
   else if(a==='etab'){S.etab=b.dataset.v;S.cm=null;render()}
   else if(a==='gohist'){goHist(b.dataset.id)}
   else if(a==='cmopen'){S.cm=b.dataset.id;render();var cmt=document.getElementById('cm_txt');if(cmt)cmt.scrollIntoView({block:'center'})}
