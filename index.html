@@ -63,6 +63,7 @@ h2{font-family:var(--display);font-size:17px;margin:0}
 .kpi .tag{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
 .kpi.crit .tag{background:var(--crit-soft);color:var(--crit)}
 .kpi.crit .n{color:var(--crit)}
+.kpi.warn .tag{background:var(--warn-soft);color:var(--warn)}
 .kpi.ok .tag{background:var(--ok-soft);color:var(--ok)}
 .kpi svg{width:22px;height:22px}
 .banner{display:flex;gap:10px;align-items:flex-start;border-radius:10px;padding:10px 14px;background:var(--crit-soft);color:var(--crit);border:1px solid var(--crit)}
@@ -310,7 +311,7 @@ function sample(){
    {id:'s7',num:'2026LA-000301-0000800005',inst:'Ministerio de Educación Pública',obj:'Equipo audiovisual para aulas',estado:'Activa',apertura:o(-8),entrega:o(-1),tipo:'mayor',ej:1},
    {id:'s8',num:'2026LN-000066-0000900004',inst:'Instituto Nacional de Seguros',obj:'Servicio de limpieza de edificios',estado:'Activa',apertura:o(15),entrega:o(24),tipo:'menor',ej:1},
    {id:'s9',num:'2026LD-000140-0001700008',inst:'Acueductos y Alcantarillados',obj:'Tubería PVC y accesorios',estado:'Entregada',apertura:o(-25),entrega:o(-14),tipo:'menor',ej:1}
-  ];
+  ].map(function(x){if(x.apertura<iso(TODAY)||x.estado==='Entregada')x.abiertaEn=x.apertura+'T09:00:00';return x});
 }
 var store={get:function(k,d){try{var v=localStorage.getItem('lc_'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){try{localStorage.setItem('lc_'+k,JSON.stringify(v))}catch(e){}}};
 /* Nube: pega aquí la dirección y la clave pública (anon) de tu proyecto de Supabase.
@@ -324,7 +325,7 @@ var items=CLOUD?[]:(store.get('items',null)||sample());
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
 var S={view:'inicio',wsel:null,histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false,etab:'resumen',euser:'',cm:null,wopen:true};
 function save(){if(!CLOUD)store.set('items',items);store.set('cfg',cfg)}
-function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en}}
+function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en,abiertaEn:r.abierta_en}}
 function toRow(it){return {num:it.num,inst:it.inst,obj:it.obj,tipo:it.tipo,apertura:it.apertura,entrega:it.entrega,al_apertura:it.alA,hora_apertura:it.horaA,al_entrega:it.alE,hora_entrega:it.horaE}}
 function dbLoad(){
   return sb.from('licitaciones').select('*').eq('user_id',USER.id).order('entrega',{ascending:true}).then(function(r){
@@ -434,7 +435,7 @@ function renderUser(){
 function events(){
   var ev=[];
   items.forEach(function(it){
-    ev.push({it:it,tipo:'apertura',fecha:it.apertura,done:diff(it.apertura)<0});
+    ev.push({it:it,tipo:'apertura',fecha:it.apertura,done:!!it.abiertaEn||it.estado==='Entregada'});
     ev.push({it:it,tipo:'entrega',fecha:it.entrega,done:it.estado==='Entregada'});
   });
   return ev;
@@ -475,14 +476,16 @@ function goHist(id){var q=document.getElementById('q');S.histId=id;S.view='histo
 
 /* kpis */
 /* Cada licitación cuenta en una sola tarjeta. Prioridad: entregada, por vencer, apertura próxima, activa. */
+/* Fases: ent = entregada · vencida = pasó la entrega · venc = por entregar (entrega en 0 a 3 días) · aper = por abrir (apertura sin marcar) · act = activa (apertura realizada) */
 function cat(i){
   if(i.estado==='Entregada')return 'ent';
-  var de=diff(i.entrega),da=diff(i.apertura);
-  if(de>=0&&de<=3)return 'venc';
-  if(da>=0&&da<=7)return 'aper';
-  if(de>=0)return 'act';
-  return 'vencida';
+  var de=diff(i.entrega);
+  if(de<0)return 'vencida';
+  if(de<=3)return 'venc';
+  if(!i.abiertaEn)return 'aper';
+  return 'act';
 }
+function porAbrir(i){return i.estado!=='Entregada'&&!i.abiertaEn}
 function kpiItems(k){
   var key=k==='aper'?'apertura':'entrega';
   if(k==='prio'){var pids={};JD.prios.forEach(function(x){pids[x.licitacion_id]=1});return items.filter(function(i){return pids[i.id]&&i.estado!=='Entregada'}).sort(function(a,b){return a.entrega<b.entrega?-1:a.entrega>b.entrega?1:0})}
@@ -491,18 +494,18 @@ function kpiItems(k){
   return r;
 }
 function kpis(){
-  return {act:kpiItems('act').length,aper:kpiItems('aper').length,ent:kpiItems('ent').length,venc:kpiItems('venc').length};
+  return {act:kpiItems('act').length,aper:kpiItems('aper').length,ent:kpiItems('ent').length,venc:kpiItems('venc').length,vencida:kpiItems('vencida').length};
 }
 function kpi(label,n,sub,icon,cls,key){
   return '<button type="button" class="card kpi '+(cls||'')+'" data-act="kpi" data-k="'+key+'" aria-label="'+label+': '+n+'. Ver lista"><div><div class="l">'+label+'</div><div class="n">'+n+'</div><div class="d">'+sub+' · <u>ver lista</u></div></div><div class="tag">'+ICON[icon]+'</div></button>';
 }
-var KT={act:['Licitaciones activas','En curso, sin apertura ni entrega cercanas.'],aper:['Apertura de ofertas','Aperturas de hoy y de los próximos 7 días.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por vencer','Entregas de hoy y de los próximos 3 días.'],prio:['Licitaciones prioritarias','Marcadas como prioritarias por tu jefe, las más cercanas primero.']};
+var KT={act:['Licitaciones activas','Apertura realizada y entrega todavía lejos.'],aper:['Por abrir','Apertura de ofertas pendiente de marcar como realizada.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por entregar','Entregas de hoy y de los próximos 3 días.'],vencida:['Vencidas','La fecha de entrega ya pasó y no se marcaron como entregadas.'],prio:['Licitaciones prioritarias','Marcadas como prioritarias por tu jefe, las más cercanas primero.']};
 function kpiRow(it){
   var k=S.kpi,fd=k==='aper'?it.apertura:it.entrega,dd=diff(fd);
   var lbl=k==='aper'?'Apertura: ':'Entrega: ';
-  var pill=(k==='aper'||k==='venc'||k==='prio')?' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>':'';
+  var pill=(k==='aper'||k==='venc'||k==='prio'||k==='vencida')?' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>':'';
   return '<div class="item"><div style="min-width:0;flex:1"><div class="t">'+esc(it.num)+'</div><div class="m">'+esc(it.inst)+' — '+esc(it.obj)+'</div><div class="m">'+lbl+fmt(fd)+pill+'</div></div>'+
-    '<div class="acts"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div>';
+    '<div class="acts"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(porAbrir(it)?'<button class="btn sm" data-act="opened" data-id="'+it.id+'">Apertura realizada</button>':'')+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div>';
 }
 function renderModal(){
   var m=document.getElementById('modal');
@@ -519,7 +522,7 @@ function renderModal(){
       '<div><div class="m" style="color:var(--muted);font-size:12px">Tipo</div>'+tipoTxt(it.tipo)+'</div>'+
       '<div><div class="m" style="color:var(--muted);font-size:12px">'+(isE?'Fecha de entrega':'Fecha de apertura')+'</div>'+fmt(fd)+' <span class="pill '+(it.estado==='Entregada'?'ok':dd<=1?'crit':dd<=3?'warn':'')+'">'+(it.estado==='Entregada'&&isE?'Entregada':when(dd))+'</span></div>'+
       '<div><div class="m" style="color:var(--muted);font-size:12px">Aviso</div>'+alertTxtT(it,S.remT)+'</div>'+(it.editada?'<div><span class="pill ed">Editada</span> '+fmtDT(it.editada)+'</div>':'')+'</div>'+
-      '<div class="acts" style="margin:0;justify-content:flex-start"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button><button class="btn sm" data-act="hist" data-id="'+it.id+'">Ver historial</button><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button>'+(it.estado!=='Entregada'?'<button class="btn sm pri" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div></div>';
+      '<div class="acts" style="margin:0;justify-content:flex-start"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button><button class="btn sm" data-act="hist" data-id="'+it.id+'">Ver historial</button><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button>'+(porAbrir(it)?'<button class="btn sm pri" data-act="opened" data-id="'+it.id+'">Apertura realizada</button>':'')+(it.estado!=='Entregada'?'<button class="btn sm pri" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div></div>';
     return;
   }
   var list=kpiItems(S.kpi),t=KT[S.kpi];
@@ -651,13 +654,14 @@ function vInicio(){
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+jefeAvisos()+
    '<div class="grid"><div class="col">'+weekCard()+calendarCard()+'</div>'+
-   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'próximos 3 días','clock',k.venc?'crit':'','venc')+(CLOUD?kpi('Prioritarias',kpiItems('prio').length,'marcadas como prioridad','star','','prio'):'')+remindersCard()+'</div></div>';
+   '<div class="col rightcol">'+kpi('Por abrir',k.aper,'apertura pendiente','gavel','','aper')+kpi('Licitaciones activas',k.act,'apertura realizada','chart','','act')+kpi('Por entregar',k.venc,'próximos 3 días','clock',k.venc?'warn':'','venc')+kpi('Vencidas',k.vencida,'sin entregar','clock',k.vencida?'crit':'','vencida')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+(CLOUD?kpi('Prioritarias',kpiItems('prio').length,'marcadas como prioridad','star','','prio'):'')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
   if(it.estado==='Entregada')return '<span class="pill ok">Entregada</span>';
   var d=diff(it.entrega);
   if(d<0)return '<span class="pill crit">Vencida</span>';
-  if(d<=3)return '<span class="pill warn">Por vencer</span>';
+  if(d<=3)return '<span class="pill warn">Por entregar</span>';
+  if(!it.abiertaEn)return '<span class="pill ed">Por abrir</span>';
   return '<span class="pill">Activa</span>';
 }
 var I_CAL='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
@@ -697,13 +701,13 @@ function vLic(){
   '<div class="card"><div class="tablewrap"><table><thead><tr><th>Procedimiento</th><th>Institución y objeto</th><th>Apertura</th><th>Entrega</th><th>Tipo</th><th>Avisos</th><th>Estado</th><th></th></tr></thead><tbody>'+
    (rows.length?rows.map(function(it){
      return '<tr><td><button type="button" class="lnk" data-act="hist" data-id="'+it.id+'" title="Ver historial">'+esc(it.num)+'</button>'+(it.ej?'<div style="color:var(--muted);font-size:11px">ejemplo</div>':'')+(it.editada?'<div style="font-size:11px;color:var(--muted);margin-top:2px"><span class="pill ed">Editada</span> '+fmtDT(it.editada)+'</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td>'+tipoTxt(it.tipo)+'</td><td class="num2" style="font-size:12px">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button> '+
-       (it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
+       (porAbrir(it)?'<button class="btn sm" data-act="opened" data-id="'+it.id+'">Apertura realizada</button> ':'')+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
    }).join(''):'<tr><td colspan="8" class="empty">No hay licitaciones que coincidan.</td></tr>')+'</tbody></table></div></div>';
 }
 function histEvents(){
   var out=[];
   items.filter(matches).forEach(function(it){
-    if(diff(it.apertura)<0)out.push({it:it,k:'apertura',fecha:it.apertura,t:'apertura',lbl:'Apertura de ofertas realizada',pill:['','Realizada']});
+    if(it.abiertaEn)out.push({it:it,k:'apertura',fecha:it.apertura,t:'apertura',lbl:'Apertura de ofertas realizada',pill:['','Realizada']});
     if(it.estado==='Entregada')out.push({it:it,k:'entrega',fecha:it.entrega,t:'entrega',lbl:'Entrega realizada',pill:['ok','Entregada']});
     else if(diff(it.entrega)<0)out.push({it:it,k:'vencida',fecha:it.entrega,t:'entrega',lbl:'Entrega vencida',pill:['crit',when(diff(it.entrega))]});
   });
@@ -713,15 +717,16 @@ function histEvents(){
 function vHistItem(it){
   var ev=[],da=diff(it.apertura),de=diff(it.entrega);
   if(it.creada)ev.push({f:it.creada,dt:1,lbl:'Licitación registrada',ic:'list'});
-  ev.push({f:it.apertura,lbl:'Apertura de ofertas',ic:'gavel',pill:da<0?['','Realizada']:[da<=1?'crit':da<=3?'warn':'',when(da)]});
+  ev.push({f:it.apertura,lbl:'Apertura de ofertas',ic:'gavel',pill:it.abiertaEn?['','Realizada']:[da<0?'warn':da<=1?'crit':da<=3?'warn':'',da<0?'Falta marcarla':when(da)]});
   if(it.estado==='Entregada')ev.push({f:it.entrega,lbl:'Entrega',ic:'doc',ok:1,pill:['ok','Entregada']});
   else ev.push({f:it.entrega,lbl:'Entrega',ic:'doc',pill:[de<0?'crit':de<=3?'warn':'',when(de)]});
   if(it.editada)ev.push({f:it.editada,dt:1,lbl:'Licitación editada',ic:'list'});
+  if(it.abiertaEn)ev.push({f:it.abiertaEn,dt:1,lbl:'Apertura marcada como realizada',ic:'gavel'});
   if(it.entregadaEn)ev.push({f:it.entregadaEn,dt:1,lbl:'Marcada como entregada',ic:'doc',ok:1});
   ev.sort(function(a,b){return a.f<b.f?-1:a.f>b.f?1:0});
   return '<div><h1>Historial</h1><p class="sub">Todo lo que ha pasado con esta licitación, en orden de fechas.</p></div>'+
   '<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0"><h2>'+esc(it.num)+'</h2><div style="margin-top:4px">'+esc(it.inst)+'</div><div style="color:var(--muted)">'+esc(it.obj)+'</div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+statusPill(it)+'<span class="pill">'+tipoTxt(it.tipo)+'</span>'+(it.editada?'<span class="pill ed">Editada · '+fmtDT(it.editada)+'</span>':'')+'</div></div>'+
-   '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start"><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button><button class="btn sm" data-act="gocal" data-d="'+it.entrega+'">Ver en calendario</button><button class="btn sm" data-act="histall">Ver todo el historial</button></div></div>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start"><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button>'+(porAbrir(it)?'<button class="btn sm pri" data-act="opened" data-id="'+it.id+'">Apertura realizada</button>':'')+'<button class="btn sm" data-act="gocal" data-d="'+it.entrega+'">Ver en calendario</button><button class="btn sm" data-act="histall">Ver todo el historial</button></div></div>'+
    '<p class="sub" style="margin:10px 0 0">Avisos · '+alertTxt(it).replace('<br>',' · ')+'</p></div>'+
   '<div class="card"><h2 style="margin-bottom:6px">Línea de tiempo</h2><div class="list">'+ev.map(function(e){
     return '<div class="item"><div class="dot" style="'+(e.ok?'background:var(--ok-soft);color:var(--ok)':'')+'">'+ICON[e.ic]+'</div><div><div class="t">'+e.lbl+'</div><div class="m">'+(e.dt?fmtDT(e.f):fmt(e.f))+(e.pill?' <span class="pill '+e.pill[0]+'">'+e.pill[1]+'</span>':'')+'</div></div></div>';
@@ -785,7 +790,10 @@ function eResumen(){
   var rows=Object.keys(por).filter(function(u){var x=por[u];return x.ent+x.act+x.venc>0}).sort(function(a,b){return por[b].ent-por[a].ent}).map(function(u){
     var x=por[u],n=x.ent+x.act+x.venc,w=function(v){return (v/n*100).toFixed(1)+'%'};
     return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.act+' activas, '+x.venc+' vencidas"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.act+' act. · '+x.venc+' venc.</div></div>'}).join('');
-  return '<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Vencidas',T.venc,'sin entregar','crit')+'</div>'+
+  var vv=JD.lics.filter(function(r){return lstat(r).venc}).sort(function(a,b){return a.entrega<b.entrega?-1:1});
+  var alerta=vv.length?'<div class="card" style="border-color:var(--crit)"><h2 style="margin-bottom:6px;color:var(--crit)">Entregas vencidas · '+vv.length+'</h2><div class="list">'+vv.map(function(r){var d=-diff(r.entrega);
+    return '<div class="item"><div class="dot vencida">'+ICON.clock+'</div><div style="min-width:0"><div class="t">'+esc(r.num)+' · '+esc(perfilDe(r.user_id))+'</div><div class="m">'+esc(r.inst)+' — entrega '+fmt(r.entrega)+' · <span class="pill crit">'+(d===1?'1 día de atraso':d+' días de atraso')+'</span></div></div></div>'}).join('')+'</div></div>':'';
+  return alerta+'<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Vencidas',T.venc,'sin entregar','crit')+'</div>'+
     '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="eleg" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span>Activas</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
 }
 function eLics(){
@@ -979,6 +987,11 @@ document.addEventListener('click',function(ev){
   else if(a==='prev'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()-1,1);render()}
   else if(a==='next'){S.cur=new Date(S.cur.getFullYear(),S.cur.getMonth()+1,1);render()}
   else if(a==='today'){S.cur=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);S.sel=iso(TODAY);render()}
+  else if(a==='opened'){
+    var ido=b.dataset.id,aho=new Date().toISOString(),okA=function(){items.forEach(function(i){if(i.id===ido)i.abiertaEn=aho});save();render();toast('Apertura marcada como realizada')};
+    if(CLOUD)sb.from('licitaciones').update({abierta_en:aho}).eq('id',ido).then(function(r){if(r.error){toast('No se pudo guardar. Intenta de nuevo.');return}okA()});
+    else okA();
+  }
   else if(a==='done'){
     var idd=b.dataset.id,ent=new Date().toISOString(),marcar=function(){items.forEach(function(i){if(i.id===idd){i.estado='Entregada';i.entregadaEn=ent}});save();render();toast('Marcada como entregada')};
     if(CLOUD)sb.from('licitaciones').update({estado:'Entregada',entregada_en:ent}).eq('id',idd).then(function(r){if(r.error){toast('No se pudo guardar. Intenta de nuevo.');return}marcar()});

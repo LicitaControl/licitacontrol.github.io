@@ -124,6 +124,54 @@ async function procesar() {
   return { enviados, errores };
 }
 
+// Entregas vencidas: un solo correo resumen a todos los jefes y admins, una vez por licitación.
+async function avisarJefes() {
+  const { hoy } = ahoraCR();
+  const { data: vencidas, error } = await admin
+    .from("licitaciones").select("id,user_id,num,inst,entrega")
+    .eq("estado", "Activa").lt("entrega", hoy);
+  if (error) throw error;
+  if (!vencidas?.length) return { jefes: 0, licitaciones: 0 };
+
+  const { data: ya } = await admin.from("avisos_enviados").select("licitacion_id")
+    .eq("tipo", "jefe_vencida").in("licitacion_id", vencidas.map((l) => l.id));
+  const hechas = new Set((ya ?? []).map((a) => a.licitacion_id));
+  const nuevas = vencidas.filter((l) => !hechas.has(l.id));
+  if (!nuevas.length) return { jefes: 0, licitaciones: 0 };
+
+  const { data: jefes } = await admin.from("perfiles").select("email").in("rol", ["jefe", "admin"]);
+  const para = (jefes ?? []).map((j) => j.email).filter(Boolean);
+  if (!para.length) return { jefes: 0, licitaciones: 0 };
+
+  const { data: perf } = await admin.from("perfiles").select("user_id,usuario,email")
+    .in("user_id", [...new Set(nuevas.map((l) => l.user_id))]);
+  const nombre = new Map((perf ?? []).map((p) => [p.user_id, p.usuario || String(p.email ?? "").split("@")[0]]));
+
+  const filas = nuevas.map((l) => {
+    const atraso = Math.abs(dias(hoy, l.entrega));
+    return `<tr><td style="padding:6px 10px 6px 0"><b>${esc(nombre.get(l.user_id) ?? "(usuario)")}</b></td><td style="padding:6px 10px 6px 0">${esc(l.num)}<br><span style="color:#667090">${esc(l.inst)}</span></td><td style="padding:6px 0;white-space:nowrap">${fmtFecha(l.entrega)}<br><span style="color:#c0392b">${atraso === 1 ? "1 día" : atraso + " días"} de atraso</span></td></tr>`;
+  }).join("");
+  const asunto = nuevas.length === 1 ? `Entrega vencida · ${nuevas[0].num}` : `${nuevas.length} entregas vencidas`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#18223a">
+<h2 style="margin:0 0 6px">${esc(asunto)}</h2><p style="margin:0 0 14px;color:#667090">La fecha de entrega ya pasó y no se marcaron como entregadas.</p>
+<table style="border-collapse:collapse;font-size:14px">${filas}</table>
+${SITE_URL ? `<p style="margin-top:18px"><a href="${esc(SITE_URL)}" style="background:#2f5fb3;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Abrir LicitaControl</a></p>` : ""}
+<p style="margin-top:18px;font-size:12px;color:#667090">Recibes este correo porque eres jefe en LicitaControl.</p></div>`;
+
+  let enviados = 0;
+  for (const to of para) {
+    try { await enviar(to, asunto, html); enviados++; } catch (e) { console.error(e); }
+  }
+  // Solo se marcan como avisadas si al menos un jefe recibió el correo; si no, se reintenta en 15 minutos.
+  if (enviados > 0) {
+    await admin.from("avisos_enviados").upsert(
+      nuevas.map((l) => ({ licitacion_id: l.id, tipo: "jefe_vencida", dias: 0 })),
+      { onConflict: "licitacion_id,tipo,dias", ignoreDuplicates: true },
+    );
+  }
+  return { jefes: enviados, licitaciones: nuevas.length };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -136,7 +184,10 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
     if (!CRON_SECRET || req.headers.get("x-cron-secret") !== CRON_SECRET) return json({ error: "No autorizado" }, 401);
-    return json(await procesar());
+    const avisos = await procesar();
+    let jefes: unknown = { jefes: 0, licitaciones: 0 };
+    try { jefes = await avisarJefes(); } catch (e) { console.error(e); jefes = { error: e instanceof Error ? e.message : String(e) }; }
+    return json({ ...avisos, vencidasAJefes: jefes });
   } catch (e) {
     console.error(e);
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
