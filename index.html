@@ -654,7 +654,7 @@ function vInicio(){
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+jefeAvisos()+
    '<div class="grid"><div class="col">'+weekCard()+calendarCard()+'</div>'+
-   '<div class="col rightcol">'+kpi('Por abrir',k.aper,'apertura pendiente','gavel','','aper')+kpi('Licitaciones activas',k.act,'apertura realizada','chart','','act')+kpi('Por entregar',k.venc,'próximos 3 días','clock',k.venc?'warn':'','venc')+kpi('Vencidas',k.vencida,'sin entregar','clock',k.vencida?'crit':'','vencida')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+(CLOUD?kpi('Prioritarias',kpiItems('prio').length,'marcadas como prioridad','star','','prio'):'')+remindersCard()+'</div></div>';
+   '<div class="col rightcol">'+kpi('Por abrir',k.aper,'apertura pendiente','gavel','','aper')+kpi('Licitaciones activas',k.act,'apertura realizada','chart','','act')+kpi('Por entregar',k.venc,'próximos 3 días','clock',k.venc?'warn':'','venc')+kpi('Vencidas',k.vencida,'sin entregar','clock',k.vencida?'crit':'','vencida')+(CLOUD?kpi('Prioritarias',kpiItems('prio').length,'marcadas como prioridad','star','','prio'):'')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
   if(it.estado==='Entregada')return '<span class="pill ok">Entregada</span>';
