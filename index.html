@@ -654,7 +654,7 @@ function formHtml(it){
    dateField('f_ap','Apertura de ofertas',v.apertura)+dateField('f_en','Fecha de entrega',v.entrega)+tipoField(v.tipo)+
    '<fieldset style="grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend><div class="avg">'+avisoCol('a','De la apertura de ofertas',alA,hA)+avisoCol('e','De la entrega',alE,hE)+'</div></fieldset>'+
    '<div style="display:flex;gap:8px;grid-column:1/-1;flex-wrap:wrap"><button class="btn pri" type="submit">'+(e?'Guardar cambios':'Agregar')+'</button>'+(e?'<button type="button" class="btn" data-act="canceledit">Cancelar</button>':'')+'</div>'+
-   '<p class="sub" style="grid-column:1/-1;margin:0">'+(CLOUD&&USER?'Los avisos llegarán a <b>'+esc(USER.email)+'</b>.':'')+'</p></form></div>';
+   '</form></div>';
 }
 function vLic(){
   var rows=items.filter(matches).sort(function(a,b){return a.entrega<b.entrega?-1:1});
