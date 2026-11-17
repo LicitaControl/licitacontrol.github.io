@@ -133,15 +133,16 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--su
 pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:12px;margin:0}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(20px,env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:50;max-width:calc(100vw - 32px)}
 .empty{color:var(--muted);padding:14px 0;text-align:center}
+.wtog{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:0;color:inherit;text-align:left}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13px;color:var(--muted)}
 .tabs button[aria-current=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 .bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface2)}
 .bar i{display:block;height:100%}
 .bar .b-ok{background:var(--ok)}.bar .b-act{background:var(--accent)}.bar .b-crit{background:var(--crit)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-.legend span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--accent)}
-.legend .l-ok:before{background:var(--ok)}.legend .l-crit:before{background:var(--crit)}
+.eleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.eleg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--accent)}
+.eleg .l-ok:before{background:var(--ok)}.eleg .l-crit:before{background:var(--crit)}
 .urow{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr) 150px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
 .urow:first-child{border-top:0}
 .urow .nm{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -202,7 +203,7 @@ textarea.cin,select.cin{width:100%;border:1px solid var(--line);border-radius:8p
 .lnk{background:none;border:0;padding:0;font-weight:700;color:var(--fg);text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .lnk:hover{color:var(--accent);text-decoration-color:var(--accent)}
 .pill.ed{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
-.avg{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.avg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .avc{display:flex;flex-direction:column;gap:2px;min-width:0}
 .avc>b{margin-bottom:4px}
 .dpw{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0;position:relative}
@@ -274,6 +275,7 @@ var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','seti
 var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 var DIAS_C=['L','K','M','J','V','S','D'];
 var ICON={
+ star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>',
  team:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.7 3 5.7"/></svg>',
  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
@@ -320,7 +322,7 @@ var JD={perfiles:[],lics:[],prios:[],coms:[]};
 if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
 var items=CLOUD?[]:(store.get('items',null)||sample());
 var cfg=store.get('cfg',{th:[7,3,1,0],backend:''});
-var S={view:'inicio',wsel:iso(TODAY),histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false,etab:'resumen',euser:'',cm:null};
+var S={view:'inicio',wsel:iso(TODAY),histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',bell:false,dismissed:false,etab:'resumen',euser:'',cm:null,wopen:true};
 function save(){if(!CLOUD)store.set('items',items);store.set('cfg',cfg)}
 function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en}}
 function toRow(it){return {num:it.num,inst:it.inst,obj:it.obj,tipo:it.tipo,apertura:it.apertura,entrega:it.entrega,al_apertura:it.alA,hora_apertura:it.horaA,al_entrega:it.alE,hora_entrega:it.horaE}}
@@ -483,6 +485,7 @@ function cat(i){
 }
 function kpiItems(k){
   var key=k==='aper'?'apertura':'entrega';
+  if(k==='prio'){var pids={};JD.prios.forEach(function(x){pids[x.licitacion_id]=1});return items.filter(function(i){return pids[i.id]&&i.estado!=='Entregada'}).sort(function(a,b){return a.entrega<b.entrega?-1:a.entrega>b.entrega?1:0})}
   var r=items.filter(function(i){return cat(i)===k}).sort(function(a,b){return a[key]<b[key]?-1:a[key]>b[key]?1:0});
   if(k==='ent')r.reverse();
   return r;
@@ -493,11 +496,11 @@ function kpis(){
 function kpi(label,n,sub,icon,cls,key){
   return '<button type="button" class="card kpi '+(cls||'')+'" data-act="kpi" data-k="'+key+'" aria-label="'+label+': '+n+'. Ver lista"><div><div class="l">'+label+'</div><div class="n">'+n+'</div><div class="d">'+sub+' · <u>ver lista</u></div></div><div class="tag">'+ICON[icon]+'</div></button>';
 }
-var KT={act:['Licitaciones activas','En curso, sin apertura ni entrega cercanas.'],aper:['Apertura de ofertas','Aperturas de hoy y de los próximos 7 días.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por vencer','Entregas de hoy y de los próximos 3 días.']};
+var KT={act:['Licitaciones activas','En curso, sin apertura ni entrega cercanas.'],aper:['Apertura de ofertas','Aperturas de hoy y de los próximos 7 días.'],ent:['Entregas realizadas','Licitaciones ya entregadas, las más recientes primero.'],venc:['Por vencer','Entregas de hoy y de los próximos 3 días.'],prio:['Licitaciones prioritarias','Marcadas como prioritarias por tu jefe, las más cercanas primero.']};
 function kpiRow(it){
   var k=S.kpi,fd=k==='aper'?it.apertura:it.entrega,dd=diff(fd);
   var lbl=k==='aper'?'Apertura: ':'Entrega: ';
-  var pill=(k==='aper'||k==='venc')?' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>':'';
+  var pill=(k==='aper'||k==='venc'||k==='prio')?' <span class="pill '+(dd<=1?'crit':dd<=3?'warn':'')+'">'+when(dd)+'</span>':'';
   return '<div class="item"><div style="min-width:0;flex:1"><div class="t">'+esc(it.num)+'</div><div class="m">'+esc(it.inst)+' — '+esc(it.obj)+'</div><div class="m">'+lbl+fmt(fd)+pill+'</div></div>'+
     '<div class="acts"><button class="btn sm" data-act="gocal" data-d="'+fd+'">Ver en calendario</button>'+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Marcar entregada</button>':'')+'</div></div>';
 }
@@ -590,7 +593,7 @@ function weekHtml(){
 }
 function weekCard(){
   var ws=weekStart(TODAY),we=addDays(ws,6);
-  return '<div class="card"><h2 style="margin-bottom:10px">Esta semana <span style="color:var(--muted);font-weight:400;font-size:13px">· '+ws.getDate()+' al '+we.getDate()+' de '+MES[we.getMonth()]+'</span></h2>'+weekHtml()+dayPanel(S.wsel)+'</div>';
+  return '<div class="card"><button type="button" class="wtog" data-act="wtoggle" aria-expanded="'+(S.wopen?'true':'false')+'"><h2 style="margin:0">Esta semana <span style="color:var(--muted);font-weight:400;font-size:13px">· '+ws.getDate()+' al '+we.getDate()+' de '+MES[we.getMonth()]+'</span></h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s;transform:rotate('+(S.wopen?'180':'0')+'deg)"><path d="M6 9l6 6 6-6"/></svg></button>'+(S.wopen?'<div style="margin-top:10px">'+weekHtml()+dayPanel(S.wsel)+'</div>':'')+'</div>';
 }
 function monthHtml(){
   var y=S.cur.getFullYear(),m=S.cur.getMonth();
@@ -648,7 +651,7 @@ function vInicio(){
   return bannerHtml()+
    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+jefeAvisos()+
    '<div class="grid"><div class="col">'+weekCard()+calendarCard()+'</div>'+
-   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'próximos 3 días','clock',k.venc?'crit':'','venc')+remindersCard()+'</div></div>';
+   '<div class="col rightcol">'+kpi('Licitaciones activas',k.act,'en curso','chart','','act')+kpi('Apertura de ofertas',k.aper,'próximos 7 días','gavel','','aper')+kpi('Entregas realizadas',k.ent,'acumuladas','doc','ok','ent')+kpi('Por vencer',k.venc,'próximos 3 días','clock',k.venc?'crit':'','venc')+(CLOUD?kpi('Prioritarias',kpiItems('prio').length,'marcadas por el jefe','star','','prio'):'')+remindersCard()+'</div></div>';
 }
 function statusPill(it){
   if(it.estado==='Entregada')return '<span class="pill ok">Entregada</span>';
@@ -665,12 +668,11 @@ function dateField(id,label,val){return '<div class="dpw" data-for="'+id+'"><spa
 function tipoField(val){return '<div class="dpw" data-for="f_tipo"><span>Tipo</span><input type="hidden" id="f_tipo" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-kind="tipo" data-for="f_tipo">'+I_TAG+'<span class="dpt">'+(TIPOS[val]||'Elige el tipo')+'</span>'+I_CHEV+'</button></div>'}
 function timeField(id,val){return '<div class="dpw" data-for="'+id+'"><span>Hora del aviso</span><input type="hidden" id="'+id+'" value="'+val+'"><button type="button" class="dpb has" data-act="dp" data-kind="time" data-for="'+id+'">'+I_CLOCK+'<span class="dpt">'+t12(val)+'</span>'+I_CHEV+'</button></div>'}
 function avisoCol(k,title,al,hora){
-  var std=[7,3,0],cus=al.filter(function(n){return std.indexOf(n)<0})[0];
-  return '<div class="avc"><b>'+title+'</b>'+std.map(function(n){
-    return '<label class="chk"><input type="checkbox" name="f_al_'+k+'" value="'+n+'"'+(al.indexOf(n)>-1?' checked':'')+'>'+(n===0?'El mismo día':n+' días antes')+'</label>';
-  }).join('')+
-  '<label class="chk"><input type="checkbox" id="f_cuson_'+k+'"'+(cus?' checked':'')+'>Personalizado</label>'+
-  '<div style="display:flex;align-items:center;gap:6px;padding-bottom:8px"><input id="f_cus_'+k+'" type="number" min="1" max="90" step="1" placeholder="Ej. 10" value="'+(cus||'')+'"'+(cus?'':' disabled')+' aria-label="Días personalizados" style="width:90px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg)"><span style="color:var(--muted);font-size:12px">días antes</span></div>'+
+  var std=[7,3,0],v=al.length?al[0]:null,cus=(v!=null&&std.indexOf(v)<0)?v:null,sel=v==null?'':(cus!=null?'c':String(v));
+  var opt=function(val,lb){return '<option value="'+val+'"'+(sel===val?' selected':'')+'>'+lb+'</option>'};
+  var sty='background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg);font:inherit;font-size:13px';
+  return '<div class="avc"><b>'+title+'</b><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-bottom:6px"><select id="f_al_'+k+'" aria-label="Cuándo avisar" style="'+sty+'">'+opt('7','7 días antes')+opt('3','3 días antes')+opt('0','El mismo día')+opt('c','Personalizado')+opt('','No avisar')+'</select>'+
+  '<input id="f_cus_'+k+'" type="number" min="1" max="90" step="1" placeholder="Días" value="'+(cus||'')+'" aria-label="Días personalizados" style="width:72px;'+sty+'"'+(sel==='c'?'':' hidden')+'></div>'+
   timeField('f_hora_'+k,hora)+'</div>';
 }
 function formHtml(it){
@@ -745,22 +747,21 @@ function vHistorial(){
 }
 /* prioridades y comentarios (vista del usuario) */
 function jefeAvisos(){
+  return ''; // los comentarios del jefe se quitaron; el código queda por si se retoman
   if(!CLOUD)return '';
   var ids={};items.forEach(function(i){ids[i.id]=i});
-  var pr=JD.prios.filter(function(x){var i=ids[x.licitacion_id];return i&&i.estado!=='Entregada'});
   var cm=JD.coms.filter(function(c){return ids[c.licitacion_id]});
   var nuevos=cm.filter(function(c){return !c.leido}).length;
-  if(!pr.length&&!cm.length)return '';
+  if(!cm.length)return '';
   var h='';
-  if(pr.length)h+='<div class="card pri"><h2 style="margin-bottom:6px">Licitaciones prioritarias</h2><div class="list">'+pr.map(function(x){var i=ids[x.licitacion_id];
-    return '<div class="item"><div class="dot entrega">'+ICON.chart+'</div><div style="min-width:0"><div class="t">'+esc(i.num)+'</div><div class="m">'+esc(i.inst)+' — entrega '+fmt(i.entrega)+'</div></div><div class="acts"><button class="btn sm" data-act="gohist" data-id="'+i.id+'">Ver</button></div></div>'}).join('')+'</div></div>';
   if(cm.length)h+='<div class="card"><h2 style="margin-bottom:6px">Comentarios del jefe'+(nuevos?' <span class="pill warn">'+nuevos+(nuevos===1?' nuevo':' nuevos')+'</span>':'')+'</h2>'+cm.slice(0,6).map(function(c){var i=ids[c.licitacion_id];
     return '<div class="cmt'+(c.leido?'':' nuevo')+'"><div class="t" style="font-size:13px">'+esc(c.texto)+'</div><div class="m">'+esc(i.num)+' · '+fmtDT(c.created_at)+(c.leido?'':' · <button class="btn sm" data-act="cmread" data-id="'+c.id+'">Marcar como leído</button>')+'</div></div>'}).join('')+'</div>';
   return '<div class="col">'+h+'</div>';
 }
 
 /* vista del jefe */
-function perfilDe(uid){var f=JD.perfiles.filter(function(p){return p.user_id===uid})[0];return f?f.email:'(usuario)'}
+function nombreP(p){return (p&&(p.usuario||String(p.email||'').split('@')[0]))||'(usuario)'}
+function perfilDe(uid){return nombreP(JD.perfiles.filter(function(p){return p.user_id===uid})[0])}
 function lstat(r){
   var ent=r.estado==='Entregada',venc=!ent&&r.entrega<iso(TODAY);
   var tarde=ent&&r.entregada_en&&String(r.entregada_en).slice(0,10)>r.entrega;
@@ -775,40 +776,33 @@ function vEquipo(){
   return h+eResumen();
 }
 function eResumen(){
-  var por={};JD.perfiles.forEach(function(p){por[p.user_id]={email:p.email,ent:0,act:0,venc:0,ok:0,tarde:0}});
+  var por={};JD.perfiles.forEach(function(p){por[p.user_id]={email:nombreP(p),ent:0,act:0,venc:0,ok:0,tarde:0}});
   var T={ent:0,act:0,venc:0,ok:0,tarde:0};
   JD.lics.forEach(function(r){var u=por[r.user_id]||(por[r.user_id]={email:perfilDe(r.user_id),ent:0,act:0,venc:0,ok:0,tarde:0}),st=lstat(r);
     ['ent','act','venc','ok','tarde'].forEach(function(k){if(st[k]){u[k]++;T[k]++}})});
-  var tot=T.ent+T.act+T.venc,pct=T.ent?Math.round(T.ok/T.ent*100):0;
+  var tot=T.ent+T.act+T.venc;
   var k=function(l,n,d,c){return '<div class="card kpi'+(c?' '+c:'')+'"><div><div class="l">'+l+'</div><div class="n">'+n+'</div><div class="d">'+d+'</div></div></div>'};
   var rows=Object.keys(por).filter(function(u){var x=por[u];return x.ent+x.act+x.venc>0}).sort(function(a,b){return por[b].ent-por[a].ent}).map(function(u){
     var x=por[u],n=x.ent+x.act+x.venc,w=function(v){return (v/n*100).toFixed(1)+'%'};
-    return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.act+' activas, '+x.venc+' vencidas"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.act+' act. · '+x.venc+' venc.'+(x.ent?'<br>'+Math.round(x.ok/x.ent*100)+'% a tiempo':'')+'</div></div>'}).join('');
-  return '<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Vencidas',T.venc,'sin entregar','crit')+k('Entregadas a tiempo',pct+'%',T.ok+' de '+T.ent,'ok')+'</div>'+
-    '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="legend" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span>Activas</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
+    return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.act+' activas, '+x.venc+' vencidas"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.act+' act. · '+x.venc+' venc.</div></div>'}).join('');
+  return '<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Vencidas',T.venc,'sin entregar','crit')+'</div>'+
+    '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="eleg" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span>Activas</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
 }
 function eLics(){
   var us=JD.perfiles.filter(function(p){return JD.lics.some(function(r){return r.user_id===p.user_id})});
   var pri={};JD.prios.forEach(function(x){pri[x.licitacion_id]=1});
   var list=JD.lics.filter(function(r){return !S.euser||r.user_id===S.euser});
-  var h='<div class="card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">Todas las licitaciones</h2><div class="grow"></div><select class="cin" id="e_user" style="width:auto" data-act="euser"><option value="">Todas las personas</option>'+us.map(function(p){return '<option value="'+p.user_id+'"'+(S.euser===p.user_id?' selected':'')+'>'+esc(p.email)+'</option>'}).join('')+'</select></div>'+
+  var h='<div class="card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">Todas las licitaciones</h2><div class="grow"></div><select class="cin" id="e_user" style="width:auto" data-act="euser"><option value="">Todas las personas</option>'+us.map(function(p){return '<option value="'+p.user_id+'"'+(S.euser===p.user_id?' selected':'')+'>'+esc(nombreP(p))+'</option>'}).join('')+'</select></div>'+
    '<div style="overflow-x:auto"><table><thead><tr><th>Número</th><th>Persona</th><th>Entrega</th><th>Estado</th><th></th></tr></thead><tbody>'+
    (list.length?list.map(function(r){var st=lstat(r);
-     return '<tr><td><b>'+esc(r.num)+'</b><div class="m" style="color:var(--muted);font-size:12px">'+esc(r.inst)+'</div></td><td>'+esc(perfilDe(r.user_id))+'</td><td class="num2">'+fmt(r.entrega)+'</td><td>'+(st.ent?'<span class="pill ok">Entregada'+(st.tarde?' tarde':'')+'</span>':st.venc?'<span class="pill crit">Vencida</span>':'<span class="pill">Activa</span>')+(pri[r.id]?' <span class="pill warn">Prioritaria</span>':'')+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="prio" data-id="'+r.id+'">'+(pri[r.id]?'Quitar prioridad':'Prioritaria')+'</button> <button class="btn sm" data-act="cmopen" data-id="'+r.id+'">Comentar</button></td></tr>'}).join(''):'<tr><td colspan="5" class="empty">No hay licitaciones.</td></tr>')+
+     return '<tr><td><b>'+esc(r.num)+'</b><div class="m" style="color:var(--muted);font-size:12px">'+esc(r.inst)+'</div></td><td>'+esc(perfilDe(r.user_id))+'</td><td class="num2">'+fmt(r.entrega)+'</td><td>'+(st.ent?'<span class="pill ok">Entregada'+(st.tarde?' tarde':'')+'</span>':st.venc?'<span class="pill crit">Vencida</span>':'<span class="pill">Activa</span>')+(pri[r.id]?' <span class="pill warn">Prioritaria</span>':'')+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="prio" data-id="'+r.id+'">'+(pri[r.id]?'Quitar prioridad':'Prioritaria')+'</button></td></tr>'}).join(''):'<tr><td colspan="5" class="empty">No hay licitaciones.</td></tr>')+
    '</tbody></table></div></div>';
-  if(S.cm){
-    var r=JD.lics.filter(function(x){return x.id===S.cm})[0];
-    if(r){var prev=JD.coms.filter(function(c){return c.licitacion_id===r.id});
-      h+='<div class="card"><h2 style="margin-bottom:4px">Comentarios · '+esc(r.num)+'</h2><p class="sub" style="margin-bottom:8px">Para '+esc(perfilDe(r.user_id))+'</p>'+
-       (prev.length?prev.map(function(c){return '<div class="cmt"><div class="t" style="font-size:13px">'+esc(c.texto)+'</div><div class="m">'+fmtDT(c.created_at)+(c.leido?' · leído':' · sin leer')+'</div></div>'}).join(''):'<div class="empty">Sin comentarios todavía.</div>')+
-       '<textarea class="cin" id="cm_txt" rows="3" maxlength="1000" placeholder="Escribe un comentario para esta persona" style="margin-top:8px"></textarea><div style="margin-top:8px;display:flex;gap:8px"><button class="btn pri" data-act="cmsend" data-id="'+r.id+'">Enviar comentario</button><button class="btn" data-act="cmclose">Cerrar</button></div></div>'}
-  }
   return h;
 }
 function eUsuarios(){
   return '<div class="card"><h2 style="margin-bottom:4px">Usuarios y roles</h2><p class="sub" style="margin-bottom:8px">Los jefes ven los reportes y todas las licitaciones. Solo el admin cambia roles.</p><div style="overflow-x:auto"><table><thead><tr><th>Correo</th><th>Rol</th><th></th></tr></thead><tbody>'+
    JD.perfiles.map(function(p){var yo=p.user_id===USER.id;
-     return '<tr><td>'+esc(p.email)+(yo?' <span class="pill">Tú</span>':'')+'</td><td><select class="cin" id="rol_'+p.user_id+'" style="width:auto"'+(yo?' disabled':'')+'>'+['usuario','jefe','admin'].map(function(r){return '<option value="'+r+'"'+(p.rol===r?' selected':'')+'>'+({usuario:'Usuario',jefe:'Jefe',admin:'Admin'})[r]+'</option>'}).join('')+'</select></td><td>'+(yo?'':'<button class="btn sm" data-act="rolsave" data-id="'+p.user_id+'">Guardar</button>')+'</td></tr>'}).join('')+
+     return '<tr><td>'+esc(nombreP(p))+(yo?' <span class="pill">Tú</span>':'')+'</td><td><select class="cin" id="rol_'+p.user_id+'" style="width:auto"'+(yo?' disabled':'')+'>'+['usuario','jefe','admin'].map(function(r){return '<option value="'+r+'"'+(p.rol===r?' selected':'')+'>'+({usuario:'Usuario',jefe:'Jefe',admin:'Admin'})[r]+'</option>'}).join('')+'</select></td><td>'+(yo?'':'<button class="btn sm" data-act="rolsave" data-id="'+p.user_id+'">Guardar</button>')+'</td></tr>'}).join('')+
    '</tbody></table></div></div>';
 }
 function vSicop(){
@@ -874,20 +868,20 @@ function render(){
   renderModal();
   renderSearch();
   var f=document.getElementById('addf');
-  ['a','e'].forEach(function(k){var co=document.getElementById('f_cuson_'+k);if(co)co.addEventListener('change',function(){var ci=document.getElementById('f_cus_'+k);ci.disabled=!co.checked;if(co.checked)ci.focus()})});
+  ['a','e'].forEach(function(k){var se=document.getElementById('f_al_'+k);if(se)se.addEventListener('change',function(){var ci=document.getElementById('f_cus_'+k);ci.hidden=se.value!=='c';if(se.value==='c')ci.focus()})});
   if(f)f.addEventListener('submit',function(ev){
     ev.preventDefault();
     var g=function(i){return document.getElementById(i).value.trim()};
     if(!g('f_ap')||!g('f_en')){toast('Elige la fecha de apertura y la de entrega');return}
     if(!g('f_tipo')){toast('Elige el tipo de licitación');return}
     var grp=function(k){
-      var al=Array.prototype.slice.call(f.querySelectorAll('input[name="f_al_'+k+'"]:checked')).map(function(c){return +c.value});
-      if(document.getElementById('f_cuson_'+k).checked){
+      var v=document.getElementById('f_al_'+k).value;
+      if(v==='')return [];
+      if(v==='c'){
         var cv=parseInt(document.getElementById('f_cus_'+k).value,10);
-        if(!(cv>=1&&cv<=90))return null;
-        if(al.indexOf(cv)<0)al.push(cv);
+        return (cv>=1&&cv<=90)?[cv]:null;
       }
-      return al;
+      return [+v];
     };
     var alA=grp('a'),alE=grp('e');
     if(alA===null||alE===null){toast('Escribe los días personalizados, de 1 a 90');return}
@@ -998,6 +992,7 @@ document.addEventListener('click',function(ev){
   else if(a==='logout'){sb.auth.signOut().then(function(){USER=null;items=[];ROL='usuario';LM='in';showLogin()})}
   else if(a==='testmail'){b.disabled=true;sb.functions.invoke('send-alerts',{body:{test:true}}).then(function(r){b.disabled=false;toast(r.error?'No se pudo enviar la prueba. Revisa la configuración del correo.':'Listo. Revisa tu bandeja de entrada y el correo no deseado.')})}
   else if(a==='dismiss'){S.dismissed=true;render()}
+  else if(a==='wtoggle'){S.wopen=!S.wopen;render()}
   else if(a==='etab'){S.etab=b.dataset.v;S.cm=null;render()}
   else if(a==='gohist'){goHist(b.dataset.id)}
   else if(a==='cmopen'){S.cm=b.dataset.id;render();var cmt=document.getElementById('cm_txt');if(cmt)cmt.scrollIntoView({block:'center'})}
