@@ -140,9 +140,11 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
 .tabs button[aria-current=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 .bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface2)}
 .bar i{display:block;height:100%}
+.bar .b-warn{background:var(--warn)}
 .bar .b-ok{background:var(--ok)}.bar .b-act{background:var(--accent)}.bar .b-crit{background:var(--crit)}
 .eleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .eleg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--accent)}
+.eleg .l-warn:before{background:var(--warn)}
 .eleg .l-ok:before{background:var(--ok)}.eleg .l-crit:before{background:var(--crit)}
 .urow{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr) 150px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
 .urow:first-child{border-top:0}
@@ -719,7 +721,8 @@ function perfilDe(uid){return nombreP(JD.perfiles.filter(function(p){return p.us
 function lstat(r){
   var ent=r.estado==='Entregada',venc=!ent&&r.entrega<iso(TODAY);
   var tarde=ent&&r.entregada_en&&String(r.entregada_en).slice(0,10)>r.entrega;
-  return {ent:ent,venc:venc,act:!ent&&!venc,tarde:!!tarde,ok:ent&&!tarde};
+  var porv=!ent&&!venc&&diff(r.entrega)<=3;
+  return {ent:ent,venc:venc,porv:porv,act:!ent&&!venc&&!porv,tarde:!!tarde,ok:ent&&!tarde};
 }
 function vEquipo(){
   var tabs=[['resumen','Resumen'],['lics','Licitaciones']];if(ROL==='admin')tabs.push(['usuarios','Usuarios y roles']);
@@ -730,20 +733,20 @@ function vEquipo(){
   return h+eResumen();
 }
 function eResumen(){
-  var por={};JD.perfiles.forEach(function(p){por[p.user_id]={email:nombreP(p),ent:0,act:0,venc:0,ok:0,tarde:0}});
-  var T={ent:0,act:0,venc:0,ok:0,tarde:0};
-  JD.lics.forEach(function(r){var u=por[r.user_id]||(por[r.user_id]={email:perfilDe(r.user_id),ent:0,act:0,venc:0,ok:0,tarde:0}),st=lstat(r);
-    ['ent','act','venc','ok','tarde'].forEach(function(k){if(st[k]){u[k]++;T[k]++}})});
-  var tot=T.ent+T.act+T.venc;
+  var por={};JD.perfiles.forEach(function(p){por[p.user_id]={email:nombreP(p),ent:0,act:0,porv:0,venc:0,ok:0,tarde:0}});
+  var T={ent:0,act:0,porv:0,venc:0,ok:0,tarde:0};
+  JD.lics.forEach(function(r){var u=por[r.user_id]||(por[r.user_id]={email:perfilDe(r.user_id),ent:0,act:0,porv:0,venc:0,ok:0,tarde:0}),st=lstat(r);
+    ['ent','act','porv','venc','ok','tarde'].forEach(function(k){if(st[k]){u[k]++;T[k]++}})});
+  var tot=T.ent+T.act+T.porv+T.venc;
   var k=function(l,n,d,c){return '<div class="card kpi'+(c?' '+c:'')+'"><div><div class="l">'+l+'</div><div class="n">'+n+'</div><div class="d">'+d+'</div></div></div>'};
-  var rows=Object.keys(por).filter(function(u){var x=por[u];return x.ent+x.act+x.venc>0}).sort(function(a,b){return por[b].ent-por[a].ent}).map(function(u){
-    var x=por[u],n=x.ent+x.act+x.venc,w=function(v){return (v/n*100).toFixed(1)+'%'};
-    return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.act+' activas, '+x.venc+' vencidas"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.act+' act. · '+x.venc+' venc.</div></div>'}).join('');
+  var rows=Object.keys(por).filter(function(u){var x=por[u];return x.ent+x.act+x.porv+x.venc>0}).sort(function(a,b){return por[b].ent-por[a].ent}).map(function(u){
+    var x=por[u],n=x.ent+x.act+x.porv+x.venc,w=function(v){return (v/n*100).toFixed(1)+'%'};
+    return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.act+' activas, '+x.porv+' por vencer'+(x.venc?', '+x.venc+' vencidas':'')+'"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-warn" style="width:'+w(x.porv)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.act+' act. · '+x.porv+' por vencer'+(x.venc?' · '+x.venc+' venc.':'')+'</div></div>'}).join('');
   var vv=JD.lics.filter(function(r){return lstat(r).venc}).sort(function(a,b){return a.entrega<b.entrega?-1:1});
   var alerta=vv.length?'<div class="card" style="border-color:var(--crit)"><h2 style="margin-bottom:6px;color:var(--crit)">Entregas vencidas · '+vv.length+'</h2><div class="list">'+vv.map(function(r){var d=-diff(r.entrega);
     return '<div class="item"><div class="dot vencida">'+ICON.clock+'</div><div style="min-width:0"><div class="t">'+esc(r.num)+' · '+esc(perfilDe(r.user_id))+'</div><div class="m">'+esc(r.inst)+' — entrega '+fmt(r.entrega)+' · <span class="pill crit">'+(d===1?'1 día de atraso':d+' días de atraso')+'</span></div></div></div>'}).join('')+'</div></div>':'';
-  return alerta+'<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Vencidas',T.venc,'sin entregar','crit')+'</div>'+
-    '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="eleg" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span>Activas</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
+  return alerta+'<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Por vencer',T.porv,'entrega en 3 días o menos',T.porv?'warn':'')+'</div>'+
+    '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="eleg" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span>Activas</span><span class="l-warn">Por vencer</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
 }
 function eLics(){
   var us=JD.perfiles.filter(function(p){return JD.lics.some(function(r){return r.user_id===p.user_id})});
