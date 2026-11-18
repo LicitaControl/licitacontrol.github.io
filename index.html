@@ -336,7 +336,7 @@ var sb=null, USER=null, ROL='usuario', MIUSUARIO='';
 var JD={perfiles:[],lics:[],prios:[]};
 if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
 var items=CLOUD?[]:store.get('items',[]);
-var S={view:'inicio',wsel:null,histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',etab:'resumen',guia:null,euser:'',wopen:true};
+var S={view:'inicio',wsel:null,histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',etab:'resumen',cop:'',guia:null,euser:'',wopen:true};
 function save(){if(!CLOUD)store.set('items',items)}
 function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en,abiertaEn:r.abierta_en}}
 function toRow(it){return {num:it.num,inst:it.inst,obj:it.obj,tipo:it.tipo,apertura:it.apertura,entrega:it.entrega,al_apertura:it.alA,hora_apertura:it.horaA,al_entrega:it.alE,hora_entrega:it.horaE}}
@@ -460,10 +460,16 @@ function comoFunciona(){
   return '<div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">¿Cómo funciona?</h2><div class="grow"></div><button class="btn sm" data-act="guiatoggle">Entendido, ocultar</button></div><div class="how">'+guiaHtml()+'</div></div>';
 }
 function vCuenta(){
-  var nm=nombreMio();
-  return '<div><h1>Gestión de cuenta</h1><p class="sub">Tus datos, tu contraseña y la ayuda del sistema.</p></div>'+
+  var nm=nombreMio(),op=S.cop||'';
+  function opt(k,t,d){return '<div class="card cta"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:180px"><h2 style="margin:0 0 2px">'+t+'</h2><p class="sub" style="margin:0;font-size:13px">'+d+'</p></div><button class="btn sm" data-act="cop" data-k="'+k+'">'+(op===k?'Cancelar':'Cambiar')+'</button></div>'+(op===k?formOp(k):'')+'</div>'}
+  function formOp(k){
+    if(k==='correo')return '<form id="emf" class="row" style="margin-top:12px"><label class="fl">Correo nuevo<input id="em1" type="email" required autocomplete="email" placeholder="nuevo@correo.com"></label><label class="fl">Tu contraseña actual<input id="em2" type="password" required autocomplete="current-password"><small class="hint">La pedimos para confirmar que eres tú.</small></label><div><button class="btn pri" type="submit">Cambiar correo</button></div><p class="lgerr" id="emmsg" style="margin:0"></p><p class="hint" style="margin:0">Te enviaremos un enlace de confirmación. El correo cambia cuando lo confirmes.</p></form>';
+    return '<form id="pwf" class="row" style="margin-top:12px"><label class="fl">Contraseña actual<input id="pw0" type="password" required autocomplete="current-password"></label><label class="fl">Contraseña nueva (mínimo 8 caracteres)<input id="pw1" type="password" minlength="8" required autocomplete="new-password"></label><label class="fl">Repite la contraseña nueva<input id="pw2" type="password" minlength="8" required autocomplete="new-password"></label><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn pri" type="submit">Guardar contraseña</button><button class="btn sm" type="button" data-act="olvide">Olvidé mi contraseña</button></div><p class="lgerr" id="pwmsg" style="margin:0"></p></form>';
+  }
+  return '<div><h1>Gestión de cuenta</h1><p class="sub">Tus datos, tu seguridad y la ayuda del sistema.</p></div>'+
   '<div class="card cta"><h2 style="margin-bottom:4px">Mis datos</h2><div class="row"><div><div class="hint" style="margin:0">Usuario</div><b>'+esc(nm||'—')+'</b></div><div><div class="hint" style="margin:0">Correo (aquí te llegan los avisos)</div><b>'+esc(USER?USER.email:'—')+'</b></div></div></div>'+
-  '<div class="card cta"><h2 style="margin-bottom:4px">Cambiar contraseña</h2><form id="pwf" class="row"><label class="fl">Contraseña nueva (mínimo 8 caracteres)<input id="pw1" type="password" minlength="8" required autocomplete="new-password"></label><label class="fl">Repite la contraseña nueva<input id="pw2" type="password" minlength="8" required autocomplete="new-password"></label><div><button class="btn pri" type="submit">Guardar contraseña</button></div><p class="lgerr" id="pwmsg" style="margin:0"></p></form></div>'+
+  opt('correo','Correo','Cambia el correo donde recibes los avisos.')+
+  opt('pass','Contraseña','Cámbiala cuando quieras.')+
   '<div class="card cta"><h2 style="margin-bottom:4px">Ayuda</h2><p class="sub" style="margin-bottom:8px">¿Es tu primera vez o quieres repasar cómo se usa?</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tour">Ver la guía paso a paso</button><button class="btn" data-act="guiashow">Mostrar «¿Cómo funciona?» en Inicio</button></div></div>'+
   '<div class="card cta"><h2 style="margin-bottom:8px">Sesión</h2><button class="btn" data-act="logout">Cerrar sesión</button></div>';
 }
@@ -965,17 +971,41 @@ document.addEventListener('change',function(ev){var t=ev.target;if(t&&t.id==='e_
 document.addEventListener('click',function(ev){var t=ev.target.closest('[data-tour]');if(!t||!TOUR)return;var a=t.dataset.tour;
   if(a==='next'){TOUR.i++;tourShow()}else if(a==='prev'){TOUR.i--;tourShow()}else tourEnd()});
 document.addEventListener('submit',function(ev){
-  if(ev.target.id!=='pwf')return;ev.preventDefault();
-  var a=document.getElementById('pw1').value,b=document.getElementById('pw2').value,m=document.getElementById('pwmsg');
-  m.style.color='var(--crit)';
-  if(a.length<8){m.textContent='Usa al menos 8 caracteres.';return}
-  if(a!==b){m.textContent='Las dos contraseñas no coinciden.';return}
-  var btn=ev.target.querySelector('button');btn.disabled=true;
-  sb.auth.updateUser({password:a}).then(function(r){
-    btn.disabled=false;
-    if(r.error){m.textContent=/same|different/i.test(r.error.message||'')?'La contraseña nueva debe ser distinta a la actual.':'No se pudo cambiar la contraseña. Intenta de nuevo.';return}
-    ev.target.reset();m.style.color='var(--ok)';m.textContent='Contraseña actualizada.';
-  });
+  var f=ev.target;if(f.id!=='pwf'&&f.id!=='emf')return;ev.preventDefault();
+  var btn=f.querySelector('button[type=submit]'),m=document.getElementById(f.id==='pwf'?'pwmsg':'emmsg');
+  m.style.color='var(--crit)';m.textContent='';
+  function fin(){btn.disabled=false}
+  function verificar(pw,ok){
+    btn.disabled=true;
+    sb.auth.signInWithPassword({email:USER.email,password:pw}).then(function(r){
+      if(r.error){fin();m.textContent='La contraseña actual no es correcta.';return}
+      ok();
+    });
+  }
+  if(f.id==='pwf'){
+    var o=document.getElementById('pw0').value,a=document.getElementById('pw1').value,c=document.getElementById('pw2').value;
+    if(a.length<8){m.textContent='La contraseña nueva debe tener al menos 8 caracteres.';return}
+    if(a!==c){m.textContent='La contraseña nueva y su confirmación no coinciden.';return}
+    if(a===o){m.textContent='La contraseña nueva debe ser distinta a la actual.';return}
+    verificar(o,function(){
+      sb.auth.updateUser({password:a}).then(function(r){
+        fin();
+        if(r.error){m.textContent='No se pudo cambiar la contraseña. Intenta de nuevo.';return}
+        S.cop='';render();toast('Contraseña actualizada');
+      });
+    });
+  }else{
+    var e=document.getElementById('em1').value.trim().toLowerCase(),pw=document.getElementById('em2').value;
+    if(!okMail(e)){m.textContent='Escribe un correo válido.';return}
+    if(USER&&e===String(USER.email).toLowerCase()){m.textContent='Ese ya es tu correo actual.';return}
+    verificar(pw,function(){
+      sb.auth.updateUser({email:e},{emailRedirectTo:location.origin+location.pathname}).then(function(r){
+        fin();
+        if(r.error){m.textContent=/already|registered|exists/i.test(r.error.message||'')?'Ese correo ya está en uso.':'No se pudo cambiar el correo. Intenta de nuevo.';return}
+        f.reset();m.style.color='var(--ok)';m.textContent='Listo. Te enviamos un enlace de confirmación a '+e+'. Ábrelo para terminar el cambio.';
+      });
+    });
+  }
 });
 function cerrarMenu(){var m=document.querySelector('#userBox .umenu'),bt=document.querySelector('#userBox .avbtn');if(m&&!m.hidden){m.hidden=true;if(bt)bt.setAttribute('aria-expanded','false')}}
 document.addEventListener('click',function(ev){
@@ -1003,7 +1033,9 @@ document.addEventListener('click',function(ev){
   if(a==='kpi'){S.kpi=b.dataset.k;renderModal();var xb=document.querySelector('.dlg .x');if(xb)xb.focus();return}
   if(a==='rem'){S.kpi='rem';S.remId=b.dataset.id;S.remT=b.dataset.t;renderModal();var xr=document.querySelector('.dlg .x');if(xr)xr.focus();return}
   if(a==='closekpi'){S.kpi=null;renderModal();return}
-  if(a==='cuenta'){cerrarMenu();S.view='cuenta';S.kpi=null;render();window.scrollTo(0,0);return}
+  if(a==='cuenta'){cerrarMenu();S.cop='';S.view='cuenta';S.kpi=null;render();window.scrollTo(0,0);return}
+  if(a==='cop'){var k=b.dataset.k;S.cop=S.cop===k?'':k;render();return}
+  if(a==='olvide'){if(!USER||!USER.email)return;b.disabled=true;sb.auth.resetPasswordForEmail(USER.email,{redirectTo:location.origin+location.pathname}).then(function(r){b.disabled=false;var m=document.getElementById('pwmsg');m.style.color=r.error?'var(--crit)':'var(--ok)';m.textContent=r.error?'No se pudo enviar el correo. Intenta de nuevo en unos minutos.':'Te enviamos un enlace a '+USER.email+' para crear una contraseña nueva.'});return}
   if(a==='tour'){tourStart();return}
   if(a==='guiatoggle'){var abre=!guiaAbierta();S.guia=abre;if(!abre)store.set('guia_'+miUid(),true);render();return}
   if(a==='guiashow'){S.guia=true;store.set('guia_'+miUid(),false);S.view='inicio';render();window.scrollTo(0,0);toast('Listo, la guía aparece en Inicio');return}
