@@ -135,15 +135,35 @@ pre{background:var(--surface2);border:1px solid var(--line);border-radius:8px;pa
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(20px,env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:50;max-width:calc(100vw - 32px)}
 .empty{color:var(--muted);padding:14px 0;text-align:center}
 .wtog{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:0;color:inherit;text-align:left}
+/* guía y cuenta */
+.hint{display:block;color:var(--muted);font-size:12px;margin-top:3px;font-weight:400;line-height:1.35}
+.ihead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:10px}
+.how .st{display:flex;flex-direction:column;gap:6px;background:var(--surface2);border-radius:12px;padding:12px}
+.how .st b{font-size:13px}.how .st span.t{font-size:12.5px;color:var(--muted);line-height:1.4}
+.how .num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+.welcome{border:1px solid var(--accent)}
+.welcome h2{font-size:20px}
+.tour{position:fixed;inset:0;z-index:90}
+.tspot{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(8,14,30,.64);pointer-events:none;transition:all .18s}
+.tpop{position:fixed;z-index:91;width:min(340px,calc(100vw - 32px));background:var(--surface);color:var(--fg);border-radius:14px;padding:16px 16px 14px;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.tpop h3{margin:0 0 4px;font-family:var(--display);font-size:17px}
+.tpop p{margin:0 0 12px;color:var(--muted);line-height:1.45;font-size:13.5px}
+.tpop .ta{display:flex;align-items:center;gap:8px}
+.tpop .tdots{margin-right:auto;font-size:12px;color:var(--muted)}
+.cta{max-width:560px}
+.cta .row{display:grid;gap:10px;margin-top:8px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13px;color:var(--muted)}
 .tabs button[aria-current=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 .bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface2)}
 .bar i{display:block;height:100%}
+.bar .b-aper{background:var(--muted)}
 .bar .b-warn{background:var(--warn)}
 .bar .b-ok{background:var(--ok)}.bar .b-act{background:var(--accent)}.bar .b-crit{background:var(--crit)}
 .eleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .eleg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--accent)}
+.eleg .l-aper:before{background:var(--muted)}
 .eleg .l-warn:before{background:var(--warn)}
 .eleg .l-ok:before{background:var(--ok)}.eleg .l-crit:before{background:var(--crit)}
 .urow{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr) 150px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
@@ -316,7 +336,7 @@ var sb=null, USER=null, ROL='usuario', MIUSUARIO='';
 var JD={perfiles:[],lics:[],prios:[]};
 if(CLOUD&&window.supabase){sb=window.supabase.createClient(SB_URL,SB_KEY)}
 var items=CLOUD?[]:store.get('items',[]);
-var S={view:'inicio',wsel:null,histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',etab:'resumen',euser:'',wopen:true};
+var S={view:'inicio',wsel:null,histId:null,edit:null,cur:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),sel:iso(TODAY),mode:'mes',af:'todo',kpi:null,pick:false,pyear:TODAY.getFullYear(),q:'',etab:'resumen',guia:null,euser:'',wopen:true};
 function save(){if(!CLOUD)store.set('items',items)}
 function fromRow(r){return {id:r.id,num:r.num,inst:r.inst,obj:r.obj,tipo:r.tipo,estado:r.estado,apertura:r.apertura,entrega:r.entrega,alA:r.al_apertura||[],horaA:(r.hora_apertura||'08:00').slice(0,5),alE:r.al_entrega||[],horaE:(r.hora_entrega||'08:00').slice(0,5),creada:r.created_at,editada:r.editada_en,entregadaEn:r.entregada_en,abiertaEn:r.abierta_en}}
 function toRow(it){return {num:it.num,inst:it.inst,obj:it.obj,tipo:it.tipo,apertura:it.apertura,entrega:it.entrega,al_apertura:it.alA,hora_apertura:it.horaA,al_entrega:it.alE,hora_entrega:it.horaE}}
@@ -410,14 +430,89 @@ function enterApp(session){
   USER=session.user;
   document.getElementById('login').hidden=true;
   document.querySelector('.app').hidden=false;
-  dbLoad().then(rolLoad).then(extraLoad).then(function(){render()}).catch(function(){render();toast('No se pudieron cargar tus licitaciones. Recarga la página.')});
+  dbLoad().then(rolLoad).then(extraLoad).then(function(){render();tourAuto()}).catch(function(){render();toast('No se pudieron cargar tus licitaciones. Recarga la página.')});
 }
 function renderUser(){
   var u=document.getElementById('userBox');
   if(!CLOUD||!USER){u.hidden=true;return}
   u.hidden=false;
-  u.innerHTML='<button type="button" class="avbtn" data-act="umenu" aria-label="Mi cuenta" aria-haspopup="true" aria-expanded="false">'+ICON.user+'</button><div class="umenu" hidden><div class="uinfo"><div class="un">'+esc(MIUSUARIO||String(USER.email||'').split('@')[0])+'</div><div class="ue">'+esc(USER.email||'')+'</div></div><button type="button" data-act="logout">Cerrar sesión</button></div>';
+  u.innerHTML='<button type="button" class="avbtn" data-act="umenu" aria-label="Mi cuenta" aria-haspopup="true" aria-expanded="false">'+ICON.user+'</button><div class="umenu" hidden><div class="uinfo"><div class="un">'+esc(MIUSUARIO||String(USER.email||'').split('@')[0])+'</div><div class="ue">'+esc(USER.email||'')+'</div></div><button type="button" data-act="cuenta">Gestión de cuenta</button><button type="button" data-act="logout">Cerrar sesión</button></div>';
 }
+
+/* ---------- guía y gestión de cuenta ---------- */
+function miUid(){return USER?USER.id:'local'}
+function nombreMio(){return MIUSUARIO||(USER&&USER.email?String(USER.email).split('@')[0]:'')}
+function guiaAbierta(){return S.guia!=null?S.guia:!store.get('guia_'+miUid(),false)}
+function pasosGuia(){
+  return [
+   ['1','Agrega la licitación','Con su número, institución, fechas de apertura y de entrega, y cuándo quieres que te avisemos.'],
+   ['2','Por abrir','Cuando llegue el día de la apertura de ofertas, tócala en <b>Apertura realizada</b>.'],
+   ['3','Activa y por entregar','Te avisamos por correo antes de cada fecha. Los últimos 3 días antes de entregar pasa a <b>Por entregar</b>.'],
+   ['4','Entregada','Cuando presentes tu oferta, tócala en <b>Entregada</b>. Si la fecha pasa sin entregarla, queda <b>Vencida</b> y se avisa a tu jefe.']];
+}
+function guiaHtml(){
+  return pasosGuia().map(function(x){return '<div class="st"><div class="num">'+x[0]+'</div><b>'+x[1]+'</b><span class="t">'+x[2]+'</span></div>'}).join('');
+}
+function bienvenidaHtml(){
+  return '<div class="card welcome"><h2 style="margin-bottom:4px">Empecemos: agrega tu primera licitación</h2><p class="sub" style="margin-bottom:6px">Aquí llevas el control de tus licitaciones y te avisamos por correo antes de cada fecha importante, para que no se te pase ninguna.</p><div class="how">'+guiaHtml()+'</div><div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" data-act="primera">Agregar mi primera licitación</button><button class="btn" data-act="tour">Ver la guía paso a paso</button></div></div>';
+}
+function comoFunciona(){
+  return '<div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">¿Cómo funciona?</h2><div class="grow"></div><button class="btn sm" data-act="guiatoggle">Entendido, ocultar</button></div><div class="how">'+guiaHtml()+'</div></div>';
+}
+function vCuenta(){
+  var nm=nombreMio();
+  return '<div><h1>Gestión de cuenta</h1><p class="sub">Tus datos, tu contraseña y la ayuda del sistema.</p></div>'+
+  '<div class="card cta"><h2 style="margin-bottom:4px">Mis datos</h2><div class="row"><div><div class="hint" style="margin:0">Usuario</div><b>'+esc(nm||'—')+'</b></div><div><div class="hint" style="margin:0">Correo (aquí te llegan los avisos)</div><b>'+esc(USER?USER.email:'—')+'</b></div></div></div>'+
+  '<div class="card cta"><h2 style="margin-bottom:4px">Cambiar contraseña</h2><form id="pwf" class="row"><label class="fl">Contraseña nueva (mínimo 8 caracteres)<input id="pw1" type="password" minlength="8" required autocomplete="new-password"></label><label class="fl">Repite la contraseña nueva<input id="pw2" type="password" minlength="8" required autocomplete="new-password"></label><div><button class="btn pri" type="submit">Guardar contraseña</button></div><p class="lgerr" id="pwmsg" style="margin:0"></p></form></div>'+
+  '<div class="card cta"><h2 style="margin-bottom:4px">Ayuda</h2><p class="sub" style="margin-bottom:8px">¿Es tu primera vez o quieres repasar cómo se usa?</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tour">Ver la guía paso a paso</button><button class="btn" data-act="guiashow">Mostrar «¿Cómo funciona?» en Inicio</button></div></div>'+
+  '<div class="card cta"><h2 style="margin-bottom:8px">Sesión</h2><button class="btn" data-act="logout">Cerrar sesión</button></div>';
+}
+
+/* recorrido paso a paso */
+var TOUR=null;
+function tourPasos(){
+  return [
+   {t:'Bienvenido a LicitaControl',x:'Te mostramos lo básico en un minuto. Aquí llevas el control de tus licitaciones y te avisamos por correo antes de cada fecha importante.'},
+   {sel:'#nav',t:'El menú',x:'<b>Inicio</b> es el resumen, <b>Licitaciones</b> es donde agregas y administras las tuyas, e <b>Historial</b> guarda todo lo que ha pasado con cada una.'},
+   {sel:'.rightcol',t:'En qué fase está cada una',x:'Cada tarjeta cuenta las licitaciones de una fase: por abrir, activas, por entregar y vencidas. Toca una tarjeta para ver su lista.'},
+   {sel:'.week',t:'Tu semana',x:'Aquí ves los 7 días de la semana. Toca un día para ver qué se abre o qué se entrega ese día; tócalo otra vez para cerrarlo.'},
+   {sel:'#nav button:nth-child(2)',t:'Agrega tu primera licitación',x:'En <b>Licitaciones</b> llenas el número, la institución, las dos fechas y cuándo quieres que te avisemos. Nosotros hacemos el resto.'},
+   {sel:'#userBox',t:'Tu cuenta',x:'Aquí abres <b>Gestión de cuenta</b> (cambiar contraseña, repetir esta guía) y cierras sesión.'}];
+}
+function tourStart(){
+  if(S.view!=='inicio'){S.view='inicio';S.kpi=null;render()}
+  cerrarMenu();
+  TOUR={i:0};tourShow();
+}
+function tourEnd(){
+  var t=document.getElementById('tour');if(t)t.remove();
+  if(TOUR){TOUR=null;store.set('tour_'+miUid(),true)}
+}
+function tourShow(){
+  var pasos=tourPasos(),st=pasos[TOUR.i],old=document.getElementById('tour');if(old)old.remove();
+  var el=st.sel?document.querySelector(st.sel):null;
+  if(st.sel&&(!el||el.offsetParent===null&&getComputedStyle(el).position!=='fixed')){TOUR.i++;if(TOUR.i>=pasos.length){tourEnd();return}tourShow();return}
+  if(el)el.scrollIntoView({block:'center',behavior:'auto'});
+  var d=document.createElement('div');d.className='tour';d.id='tour';
+  var last=TOUR.i===pasos.length-1;
+  d.innerHTML=(el?'<div class="tspot"></div>':'<div class="tspot" style="inset:50% auto auto 50%;width:0;height:0"></div>')+
+   '<div class="tpop" role="dialog" aria-modal="true" aria-label="Guía"><h3>'+st.t+'</h3><p>'+st.x+'</p><div class="ta"><span class="tdots">'+(TOUR.i+1)+' de '+pasos.length+'</span>'+(last?'':'<button class="btn sm" data-tour="skip">Saltar</button>')+(TOUR.i>0?'<button class="btn sm" data-tour="prev">Atrás</button>':'')+'<button class="btn sm pri" data-tour="'+(last?'end':'next')+'">'+(last?'Listo':'Siguiente')+'</button></div></div>';
+  document.body.appendChild(d);
+  var sp=d.querySelector('.tspot'),pop=d.querySelector('.tpop'),vw=window.innerWidth,vh=window.innerHeight;
+  if(el){
+    var r=el.getBoundingClientRect(),pad=6;
+    sp.style.left=(r.left-pad)+'px';sp.style.top=(r.top-pad)+'px';sp.style.width=(r.width+pad*2)+'px';sp.style.height=(r.height+pad*2)+'px';
+    var ph=pop.offsetHeight,pw=pop.offsetWidth;
+    var top=r.bottom+pad+12;if(top+ph>vh-12)top=Math.max(12,r.top-pad-12-ph);
+    var left=Math.min(Math.max(12,r.left),vw-pw-12);
+    if(r.right+pad+12+pw<vw&&r.width<vw*0.4&&top+ph>vh-12){left=r.right+pad+12;top=Math.max(12,r.top)}
+    pop.style.top=Math.min(Math.max(12,top),vh-ph-12)+'px';pop.style.left=left+'px';
+  }else{
+    pop.style.top=Math.max(12,(vh-pop.offsetHeight)/2)+'px';pop.style.left=Math.max(12,(vw-pop.offsetWidth)/2)+'px';
+  }
+  var b=pop.querySelector('.pri');if(b)b.focus();
+}
+function tourAuto(){if(CLOUD&&USER&&!store.get('tour_'+miUid(),false)&&!TOUR)setTimeout(function(){if(USER&&!TOUR&&S.view==='inicio')tourStart()},500)}
 
 /* eventos derivados */
 function events(){
@@ -617,7 +712,9 @@ function remindersCard(){
 
 function vInicio(){
   var k=kpis(),d=TODAY;
-  return    '<div><h1>Hola, bienvenido</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Esta es la semana en curso.</p></div>'+
+  var nm=nombreMio(),vacia=CLOUD&&!items.length;
+  return    '<div class="ihead"><div><h1>'+(nm?'Hola, '+esc(nm):'Hola, bienvenido')+'</h1><p class="sub">Hoy es '+DIAS[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' de '+MES[d.getMonth()]+'. Aquí ves de un vistazo tus licitaciones y qué vence pronto.</p></div>'+(CLOUD?'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="guiatoggle">¿Cómo funciona?</button><button class="btn sm" data-act="tour">Guía paso a paso</button></div>':'')+'</div>'+
+   (vacia?bienvenidaHtml():(CLOUD&&guiaAbierta()?comoFunciona():''))+
    '<div class="grid"><div class="col">'+weekCard()+calendarCard()+'</div>'+
    '<div class="col rightcol">'+kpi('Por abrir',k.aper,'apertura pendiente','gavel','','aper')+kpi('Licitaciones activas',k.act,'apertura realizada','chart','','act')+kpi('Por entregar',k.venc,'próximos 3 días','clock',k.venc?'warn':'','venc')+kpi('Vencidas',k.vencida,'sin entregar','clock',k.vencida?'crit':'','vencida')+(CLOUD?kpi('Prioritarias',kpiItems('prio').length,'marcadas como prioridad','star','','prio'):'')+remindersCard()+'</div></div>';
 }
@@ -633,8 +730,8 @@ var I_CAL='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="c
 var I_CLOCK='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 var I_TAG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1"/></svg>';
 var I_CHEV='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"/></svg>';
-function dateField(id,label,val){return '<div class="dpw" data-for="'+id+'"><span>'+label+'</span><input type="hidden" id="'+id+'" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-for="'+id+'">'+I_CAL+'<span class="dpt">'+(val?fmt(val):'Elegir fecha')+'</span></button></div>'}
-function tipoField(val){return '<div class="dpw" data-for="f_tipo"><span>Tipo</span><input type="hidden" id="f_tipo" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-kind="tipo" data-for="f_tipo">'+I_TAG+'<span class="dpt">'+(TIPOS[val]||'Elige el tipo')+'</span>'+I_CHEV+'</button></div>'}
+function dateField(id,label,val,hint){return '<div class="dpw" data-for="'+id+'"><span>'+label+'</span><input type="hidden" id="'+id+'" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-for="'+id+'">'+I_CAL+'<span class="dpt">'+(val?fmt(val):'Elegir fecha')+'</span></button>'+(hint?'<small class="hint">'+hint+'</small>':'')+'</div>'}
+function tipoField(val){return '<div class="dpw" data-for="f_tipo"><span>Tipo</span><input type="hidden" id="f_tipo" value="'+esc(val||'')+'"><button type="button" class="dpb'+(val?' has':'')+'" data-act="dp" data-kind="tipo" data-for="f_tipo">'+I_TAG+'<span class="dpt">'+(TIPOS[val]||'Elige el tipo')+'</span>'+I_CHEV+'</button><small class="hint">Según el cartel del procedimiento.</small></div>'}
 function timeField(id,val){return '<div class="dpw" data-for="'+id+'"><span>Hora del aviso</span><input type="hidden" id="'+id+'" value="'+val+'"><button type="button" class="dpb has" data-act="dp" data-kind="time" data-for="'+id+'">'+I_CLOCK+'<span class="dpt">'+t12(val)+'</span>'+I_CHEV+'</button></div>'}
 function avisoCol(k,title,al,hora){
   var std=[7,3,0],v=al.length?al[0]:null,cus=(v!=null&&std.indexOf(v)<0)?v:null,sel=v==null?'':(cus!=null?'c':String(v));
@@ -650,11 +747,11 @@ function formHtml(it){
   var hA=e?horaOf(it,'apertura'):'08:00',hE=e?horaOf(it,'entrega'):'08:00';
   return '<div class="card" id="formcard"><h2 style="margin-bottom:10px">'+(e?'Editar licitación · '+esc(it.num):'Agregar licitación')+'</h2><form class="f" id="addf" style="align-items:start">'+
    '<div style="grid-column:1/-1;display:grid;gap:10px">'+
-     '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001" value="'+esc(v.num||'')+'"></label>'+
+     '<label class="fl">Número de procedimiento<input id="f_num" required placeholder="2026LN-000001-0001100001" value="'+esc(v.num||'')+'"><small class="hint">El código que aparece en el cartel. Ejemplo: 2026LN-000001-0001100001</small></label>'+
      '<label class="fl">Institución<input id="f_inst" required placeholder="Municipalidad de…" value="'+esc(v.inst||'')+'"></label>'+
-     '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata" value="'+esc(v.obj||'')+'"></label></div>'+
-   dateField('f_ap','Apertura de ofertas',v.apertura)+dateField('f_en','Fecha de entrega',v.entrega)+tipoField(v.tipo)+
-   '<fieldset style="grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend><div class="avg">'+avisoCol('a','De la apertura de ofertas',alA,hA)+avisoCol('e','De la entrega',alE,hE)+'</div></fieldset>'+
+     '<label class="fl">Objeto<input id="f_obj" required placeholder="Qué se contrata" value="'+esc(v.obj||'')+'"><small class="hint">Qué se está comprando o contratando, en pocas palabras.</small></label></div>'+
+   dateField('f_ap','Apertura de ofertas',v.apertura,'El día en que se abren las ofertas.')+dateField('f_en','Fecha de entrega',v.entrega,'El último día para presentar tu oferta.')+tipoField(v.tipo)+
+   '<fieldset style="grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:0;min-width:0"><legend style="font-size:12px;color:var(--muted);padding:0 4px">Avisarme</legend><p class="hint" style="margin:0 0 8px">Te escribimos por correo antes de cada fecha. Elige cuántos días antes y a qué hora.</p><div class="avg">'+avisoCol('a','De la apertura de ofertas',alA,hA)+avisoCol('e','De la entrega',alE,hE)+'</div></fieldset>'+
    '<div style="display:flex;gap:8px;grid-column:1/-1;flex-wrap:wrap"><button class="btn pri" type="submit">'+(e?'Guardar cambios':'Agregar')+'</button>'+(e?'<button type="button" class="btn" data-act="canceledit">Cancelar</button>':'')+'</div>'+
    '</form></div>';
 }
@@ -667,7 +764,7 @@ function vLic(){
    (rows.length?rows.map(function(it){
      return '<tr><td><button type="button" class="lnk" data-act="hist" data-id="'+it.id+'" title="Ver historial">'+esc(it.num)+'</button>'+''+(it.editada?'<div style="font-size:11px;color:var(--muted);margin-top:2px"><span class="pill ed">Editada</span> '+fmtDT(it.editada)+'</div>':'')+'</td><td>'+esc(it.inst)+'<div style="color:var(--muted);font-size:12px">'+esc(it.obj)+'</div></td><td class="num2">'+fmt(it.apertura)+'</td><td class="num2">'+fmt(it.entrega)+'</td><td>'+tipoTxt(it.tipo)+'</td><td class="num2" style="font-size:12px">'+alertTxt(it)+'</td><td>'+statusPill(it)+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="edit" data-id="'+it.id+'">Editar</button> '+
        (porAbrir(it)?'<button class="btn sm" data-act="opened" data-id="'+it.id+'">Apertura realizada</button> ':'')+(it.estado!=='Entregada'?'<button class="btn sm" data-act="done" data-id="'+it.id+'">Entregada</button> ':'')+'<button class="btn sm" data-act="del" data-id="'+it.id+'">Quitar</button></td></tr>';
-   }).join(''):'<tr><td colspan="8" class="empty">No hay licitaciones que coincidan.</td></tr>')+'</tbody></table></div></div>';
+   }).join(''):'<tr><td colspan="8" class="empty">'+(items.length?'Ninguna licitación coincide con la búsqueda.':'Todavía no tienes licitaciones. Llena el formulario de arriba para agregar la primera.')+'</td></tr>')+'</tbody></table></div></div>';
 }
 function histEvents(){
   var out=[];
@@ -707,7 +804,7 @@ function vHistorial(){
     return '<button type="button" class="btn'+(S.af===f[0]?' pri':'')+'" data-act="afilter" data-f="'+f[0]+'" aria-pressed="'+(S.af===f[0])+'">'+f[1]+' · '+n(f[0])+'</button>';
   }).join('');
   var rows=all.filter(function(e){return S.af==='todo'||e.k===S.af});
-  var vacio={todo:'Todavía no hay movimientos.',entrega:'Todavía no hay entregas realizadas.',apertura:'Todavía no hay aperturas realizadas.',vencida:'No hay entregas vencidas.'}[S.af];
+  var vacio={todo:items.length?'Todavía no hay movimientos.':'Aquí verás el historial de cada licitación cuando agregues la primera.',entrega:'Todavía no hay entregas realizadas.',apertura:'Todavía no hay aperturas realizadas.',vencida:'No hay entregas vencidas.'}[S.af];
   return '<div><h1>Historial</h1><p class="sub">Lo que ya pasó con tus licitaciones, de lo más reciente a lo más antiguo. Toca una fila para ver el detalle.</p></div>'+
   '<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+chips+'</div><div class="list">'+(rows.length?rows.map(function(e){
     var c=e.k==='vencida'?'vencida':e.k==='entrega'?'':'';
@@ -722,7 +819,8 @@ function lstat(r){
   var ent=r.estado==='Entregada',venc=!ent&&r.entrega<iso(TODAY);
   var tarde=ent&&r.entregada_en&&String(r.entregada_en).slice(0,10)>r.entrega;
   var porv=!ent&&!venc&&diff(r.entrega)<=3;
-  return {ent:ent,venc:venc,porv:porv,act:!ent&&!venc&&!porv,tarde:!!tarde,ok:ent&&!tarde};
+  var lejos=!ent&&!venc&&!porv;
+  return {ent:ent,venc:venc,porv:porv,aper:lejos&&!r.abierta_en,act:lejos&&!!r.abierta_en,tarde:!!tarde,ok:ent&&!tarde};
 }
 function vEquipo(){
   var tabs=[['resumen','Resumen'],['lics','Licitaciones']];if(ROL==='admin')tabs.push(['usuarios','Usuarios y roles']);
@@ -733,20 +831,20 @@ function vEquipo(){
   return h+eResumen();
 }
 function eResumen(){
-  var por={};JD.perfiles.forEach(function(p){por[p.user_id]={email:nombreP(p),ent:0,act:0,porv:0,venc:0,ok:0,tarde:0}});
-  var T={ent:0,act:0,porv:0,venc:0,ok:0,tarde:0};
-  JD.lics.forEach(function(r){var u=por[r.user_id]||(por[r.user_id]={email:perfilDe(r.user_id),ent:0,act:0,porv:0,venc:0,ok:0,tarde:0}),st=lstat(r);
-    ['ent','act','porv','venc','ok','tarde'].forEach(function(k){if(st[k]){u[k]++;T[k]++}})});
-  var tot=T.ent+T.act+T.porv+T.venc;
+  var por={};JD.perfiles.forEach(function(p){por[p.user_id]={email:nombreP(p),ent:0,aper:0,act:0,porv:0,venc:0,ok:0,tarde:0}});
+  var T={ent:0,aper:0,act:0,porv:0,venc:0,ok:0,tarde:0};
+  JD.lics.forEach(function(r){var u=por[r.user_id]||(por[r.user_id]={email:perfilDe(r.user_id),ent:0,aper:0,act:0,porv:0,venc:0,ok:0,tarde:0}),st=lstat(r);
+    ['ent','aper','act','porv','venc','ok','tarde'].forEach(function(k){if(st[k]){u[k]++;T[k]++}})});
+  var tot=T.ent+T.aper+T.act+T.porv+T.venc;
   var k=function(l,n,d,c){return '<div class="card kpi'+(c?' '+c:'')+'"><div><div class="l">'+l+'</div><div class="n">'+n+'</div><div class="d">'+d+'</div></div></div>'};
-  var rows=Object.keys(por).filter(function(u){var x=por[u];return x.ent+x.act+x.porv+x.venc>0}).sort(function(a,b){return por[b].ent-por[a].ent}).map(function(u){
-    var x=por[u],n=x.ent+x.act+x.porv+x.venc,w=function(v){return (v/n*100).toFixed(1)+'%'};
-    return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.act+' activas, '+x.porv+' por vencer'+(x.venc?', '+x.venc+' vencidas':'')+'"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-warn" style="width:'+w(x.porv)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.act+' act. · '+x.porv+' por vencer'+(x.venc?' · '+x.venc+' venc.':'')+'</div></div>'}).join('');
+  var rows=Object.keys(por).filter(function(u){var x=por[u];return x.ent+x.aper+x.act+x.porv+x.venc>0}).sort(function(a,b){return por[b].ent-por[a].ent}).map(function(u){
+    var x=por[u],n=x.ent+x.aper+x.act+x.porv+x.venc,w=function(v){return (v/n*100).toFixed(1)+'%'};
+    return '<div class="urow"><div class="nm" title="'+esc(x.email)+'">'+esc(x.email)+'</div><div class="bar" role="img" aria-label="'+x.ent+' entregadas, '+x.aper+' por abrir, '+x.act+' activas, '+x.porv+' por vencer'+(x.venc?', '+x.venc+' vencidas':'')+'"><i class="b-ok" style="width:'+w(x.ent)+'"></i><i class="b-aper" style="width:'+w(x.aper)+'"></i><i class="b-act" style="width:'+w(x.act)+'"></i><i class="b-warn" style="width:'+w(x.porv)+'"></i><i class="b-crit" style="width:'+w(x.venc)+'"></i></div><div class="st">'+x.ent+' ent. · '+x.aper+' por abrir · '+x.act+' act. · '+x.porv+' por vencer'+(x.venc?' · '+x.venc+' venc.':'')+'</div></div>'}).join('');
   var vv=JD.lics.filter(function(r){return lstat(r).venc}).sort(function(a,b){return a.entrega<b.entrega?-1:1});
   var alerta=vv.length?'<div class="card" style="border-color:var(--crit)"><h2 style="margin-bottom:6px;color:var(--crit)">Entregas vencidas · '+vv.length+'</h2><div class="list">'+vv.map(function(r){var d=-diff(r.entrega);
     return '<div class="item"><div class="dot vencida">'+ICON.clock+'</div><div style="min-width:0"><div class="t">'+esc(r.num)+' · '+esc(perfilDe(r.user_id))+'</div><div class="m">'+esc(r.inst)+' — entrega '+fmt(r.entrega)+' · <span class="pill crit">'+(d===1?'1 día de atraso':d+' días de atraso')+'</span></div></div></div>'}).join('')+'</div></div>':'';
-  return alerta+'<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Activas',T.act,'en curso')+k('Por vencer',T.porv,'entrega en 3 días o menos',T.porv?'warn':'')+'</div>'+
-    '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="eleg" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span>Activas</span><span class="l-warn">Por vencer</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
+  return alerta+'<div class="kgrid">'+k('Total de licitaciones',tot,'de todo el equipo')+k('Entregadas',T.ent,'completadas','ok')+k('Por abrir',T.aper,'apertura pendiente')+k('Activas',T.act,'apertura realizada')+k('Por vencer',T.porv,'entrega en 3 días o menos',T.porv?'warn':'')+'</div>'+
+    '<div class="card"><h2 style="margin-bottom:4px">Rendimiento por persona</h2><div class="eleg" style="margin-bottom:6px"><span class="l-ok">Entregadas</span><span class="l-aper">Por abrir</span><span>Activas</span><span class="l-warn">Por vencer</span><span class="l-crit">Vencidas</span></div>'+(rows||'<div class="empty">Todavía no hay licitaciones registradas.</div>')+'</div>';
 }
 function eLics(){
   var us=JD.perfiles.filter(function(p){return JD.lics.some(function(r){return r.user_id===p.user_id})});
@@ -755,7 +853,7 @@ function eLics(){
   var h='<div class="card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">Todas las licitaciones</h2><div class="grow"></div><select class="cin" id="e_user" style="width:auto" data-act="euser"><option value="">Todas las personas</option>'+us.map(function(p){return '<option value="'+p.user_id+'"'+(S.euser===p.user_id?' selected':'')+'>'+esc(nombreP(p))+'</option>'}).join('')+'</select></div>'+
    '<div style="overflow-x:auto"><table><thead><tr><th>Número</th><th>Persona</th><th>Entrega</th><th>Estado</th><th></th></tr></thead><tbody>'+
    (list.length?list.map(function(r){var st=lstat(r);
-     return '<tr><td><b>'+esc(r.num)+'</b><div class="m" style="color:var(--muted);font-size:12px">'+esc(r.inst)+'</div></td><td>'+esc(perfilDe(r.user_id))+'</td><td class="num2">'+fmt(r.entrega)+'</td><td>'+(st.ent?'<span class="pill ok">Entregada'+(st.tarde?' tarde':'')+'</span>':st.venc?'<span class="pill crit">Vencida</span>':'<span class="pill">Activa</span>')+(pri[r.id]?' <span class="pill warn">Prioritaria</span>':'')+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="prio" data-id="'+r.id+'">'+(pri[r.id]?'Quitar prioridad':'Prioritaria')+'</button></td></tr>'}).join(''):'<tr><td colspan="5" class="empty">No hay licitaciones.</td></tr>')+
+     return '<tr><td><b>'+esc(r.num)+'</b><div class="m" style="color:var(--muted);font-size:12px">'+esc(r.inst)+'</div></td><td>'+esc(perfilDe(r.user_id))+'</td><td class="num2">'+fmt(r.entrega)+'</td><td>'+(st.ent?'<span class="pill ok">Entregada'+(st.tarde?' tarde':'')+'</span>':st.venc?'<span class="pill crit">Vencida</span>':st.porv?'<span class="pill warn">Por vencer</span>':st.aper?'<span class="pill ed">Por abrir</span>':'<span class="pill">Activa</span>')+(pri[r.id]?' <span class="pill warn">Prioritaria</span>':'')+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="prio" data-id="'+r.id+'">'+(pri[r.id]?'Quitar prioridad':'Prioritaria')+'</button></td></tr>'}).join(''):'<tr><td colspan="5" class="empty">No hay licitaciones.</td></tr>')+
    '</tbody></table></div></div>';
   return h;
 }
@@ -811,7 +909,7 @@ function render(){
   renderNav();
   renderUser();
   var p=document.getElementById('page');
-  p.innerHTML=({inicio:vInicio,licitaciones:vLic,historial:vHistorial,equipo:vEquipo})[S.view]();
+  p.innerHTML=({inicio:vInicio,licitaciones:vLic,historial:vHistorial,equipo:vEquipo,cuenta:vCuenta})[S.view]();
   renderModal();
   renderSearch();
   var f=document.getElementById('addf');
@@ -864,6 +962,21 @@ var tt;function toast(m){var t=document.getElementById('toast');t.textContent=m;
 
 
 document.addEventListener('change',function(ev){var t=ev.target;if(t&&t.id==='e_user'){S.euser=t.value;render()}});
+document.addEventListener('click',function(ev){var t=ev.target.closest('[data-tour]');if(!t||!TOUR)return;var a=t.dataset.tour;
+  if(a==='next'){TOUR.i++;tourShow()}else if(a==='prev'){TOUR.i--;tourShow()}else tourEnd()});
+document.addEventListener('submit',function(ev){
+  if(ev.target.id!=='pwf')return;ev.preventDefault();
+  var a=document.getElementById('pw1').value,b=document.getElementById('pw2').value,m=document.getElementById('pwmsg');
+  m.style.color='var(--crit)';
+  if(a.length<8){m.textContent='Usa al menos 8 caracteres.';return}
+  if(a!==b){m.textContent='Las dos contraseñas no coinciden.';return}
+  var btn=ev.target.querySelector('button');btn.disabled=true;
+  sb.auth.updateUser({password:a}).then(function(r){
+    btn.disabled=false;
+    if(r.error){m.textContent=/same|different/i.test(r.error.message||'')?'La contraseña nueva debe ser distinta a la actual.':'No se pudo cambiar la contraseña. Intenta de nuevo.';return}
+    ev.target.reset();m.style.color='var(--ok)';m.textContent='Contraseña actualizada.';
+  });
+});
 function cerrarMenu(){var m=document.querySelector('#userBox .umenu'),bt=document.querySelector('#userBox .avbtn');if(m&&!m.hidden){m.hidden=true;if(bt)bt.setAttribute('aria-expanded','false')}}
 document.addEventListener('click',function(ev){
   if(!ev.target.closest('#userBox'))cerrarMenu();
@@ -890,6 +1003,11 @@ document.addEventListener('click',function(ev){
   if(a==='kpi'){S.kpi=b.dataset.k;renderModal();var xb=document.querySelector('.dlg .x');if(xb)xb.focus();return}
   if(a==='rem'){S.kpi='rem';S.remId=b.dataset.id;S.remT=b.dataset.t;renderModal();var xr=document.querySelector('.dlg .x');if(xr)xr.focus();return}
   if(a==='closekpi'){S.kpi=null;renderModal();return}
+  if(a==='cuenta'){cerrarMenu();S.view='cuenta';S.kpi=null;render();window.scrollTo(0,0);return}
+  if(a==='tour'){tourStart();return}
+  if(a==='guiatoggle'){var abre=!guiaAbierta();S.guia=abre;if(!abre)store.set('guia_'+miUid(),true);render();return}
+  if(a==='guiashow'){S.guia=true;store.set('guia_'+miUid(),false);S.view='inicio';render();window.scrollTo(0,0);toast('Listo, la guía aparece en Inicio');return}
+  if(a==='primera'){S.view='licitaciones';render();window.scrollTo(0,0);var fn=document.getElementById('f_num');if(fn)fn.focus();return}
   if(a==='umenu'){var um=document.querySelector('#userBox .umenu');um.hidden=!um.hidden;b.setAttribute('aria-expanded',um.hidden?'false':'true');return}
   if(a==='afilter'){S.af=b.dataset.f;render();return}
   if(a==='wday'){S.wsel=(S.wsel===b.dataset.d)?null:b.dataset.d;render();return}
@@ -955,7 +1073,7 @@ document.addEventListener('keydown',function(ev){
   var t=ev.target;
   if(ev.key==='Enter'&&DP&&DP.kind==='time'&&(t.id==='t_h'||t.id==='t_m')){ev.preventDefault();dpClose()}
 });
-document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){cerrarMenu();if(DP)dpClose();else if(S.kpi){S.kpi=null;renderModal()}}});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(TOUR){tourEnd();return}cerrarMenu();if(DP)dpClose();else if(S.kpi){S.kpi=null;renderModal()}}});
 render();
 if(CLOUD){
   document.querySelector('.app').hidden=true;
